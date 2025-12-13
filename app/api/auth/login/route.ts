@@ -69,10 +69,27 @@ export async function POST(request: NextRequest) {
         isAdmin: user.isAdmin,
       },
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Login error:', error)
+    
+    // Check for database connection errors
+    if (error?.code === 'P1001' || error?.message?.includes('connect')) {
+      return NextResponse.json(
+        { error: 'Database connection failed. Please check DATABASE_URL environment variable.' },
+        { status: 500 }
+      )
+    }
+    
+    // Check for Prisma errors
+    if (error?.code?.startsWith('P')) {
+      return NextResponse.json(
+        { error: `Database error: ${error.message || 'Unknown database error'}` },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json(
-      { error: 'An error occurred during login' },
+      { error: error?.message || 'An error occurred during login' },
       { status: 500 }
     )
   }
