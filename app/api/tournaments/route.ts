@@ -6,17 +6,10 @@ export async function GET(request: NextRequest) {
   try {
     const tournaments = await prisma.tournament.findMany({
       include: {
-        creator: {
-          select: {
-            id: true,
-            username: true,
-            displayName: true,
-          },
-        },
         _count: {
           select: {
             participants: true,
-            games: true,
+            matches: true,
           },
         },
       },
@@ -38,11 +31,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth()
-    const { name, description, maxParticipants, startDate, timeControl } = await request.json()
+    const { name, description, maxPlayers, startDate } = await request.json()
 
-    if (!name || !maxParticipants || !timeControl) {
+    if (!name || !maxPlayers) {
       return NextResponse.json(
-        { error: 'Name, max participants, and time control are required' },
+        { error: 'Name and max players are required' },
         { status: 400 }
       )
     }
@@ -51,20 +44,9 @@ export async function POST(request: NextRequest) {
       data: {
         name,
         description,
-        maxParticipants: parseInt(maxParticipants),
+        maxPlayers: parseInt(maxPlayers),
         startDate: startDate ? new Date(startDate) : null,
-        timeControl: parseInt(timeControl),
-        creatorId: session.id,
-        status: 'pending',
-      },
-      include: {
-        creator: {
-          select: {
-            id: true,
-            username: true,
-            displayName: true,
-          },
-        },
+        status: 'upcoming',
       },
     })
 
