@@ -1,0 +1,215 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String    @id @default(cuid())
+  username        String    @unique
+  password        String
+  displayName     String?
+  profileImage    String?
+  bio             String?
+  isAdmin         Boolean   @default(false)
+  isBanned        Boolean   @default(false)
+  isSuspended     Boolean   @default(false)
+  suspendedUntil  DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Chess games
+  gamesAsWhite    Game[]    @relation("WhitePlayer")
+  gamesAsBlack    Game[]    @relation("BlackPlayer")
+
+  // Friendships (sent and received)
+  sentFriendRequests      Friendship[] @relation("FriendshipSender")
+  receivedFriendRequests  Friendship[] @relation("FriendshipReceiver")
+
+  // Messages
+  sentMessages     Message[] @relation("MessageSender")
+  receivedMessages Message[] @relation("MessageReceiver")
+
+  // Marketplace
+  products         Product[]
+  orders           Order[]
+
+  // Tournament participation
+  tournamentParticipants TournamentParticipant[]
+  tournamentMatches      TournamentMatch[] @relation("MatchPlayer")
+
+  @@index([username])
+  @@index([isAdmin])
+  @@index([isBanned])
+}
+
+model Friendship {
+  id          String   @id @default(cuid())
+  senderId    String
+  receiverId  String
+  status      String   @default("pending") // pending, accepted, rejected
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sender      User     @relation("FriendshipSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver    User     @relation("FriendshipReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([status])
+}
+
+model Game {
+  id              String    @id @default(cuid())
+  whitePlayerId   String
+  blackPlayerId   String
+  fen             String    @default("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+  pgn             String    @default("")
+  status          String    @default("active") // active, draw_offered_white, draw_offered_black, completed, resigned
+  result          String?   // white_wins, black_wins, draw, null if active
+  timeControl     Int       @default(600) // seconds per player
+  whiteTimeLeft   Int       @default(600)
+  blackTimeLeft   Int       @default(600)
+  lastMoveAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  completedAt     DateTime?
+  
+  tournamentMatchId String?
+  tournamentMatch   TournamentMatch? @relation(fields: [tournamentMatchId], references: [id])
+
+  whitePlayer     User      @relation("WhitePlayer", fields: [whitePlayerId], references: [id], onDelete: Cascade)
+  blackPlayer     User      @relation("BlackPlayer", fields: [blackPlayerId], references: [id], onDelete: Cascade)
+
+  spectators      Spectator[]
+
+  @@index([whitePlayerId])
+  @@index([blackPlayerId])
+  @@index([status])
+  @@index([tournamentMatchId])
+}
+
+model Spectator {
+  id        String   @id @default(cuid())
+  gameId    String
+  userId    String
+  joinedAt  DateTime @default(now())
+
+  game      Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, userId])
+  @@index([gameId])
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  senderId    String
+  receiverId  String
+  content     String
+  isRead      Boolean  @default(false)
+  isFlagged   Boolean  @default(false) // for bad language detection
+  createdAt   DateTime @default(now())
+
+  sender      User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver    User     @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([isFlagged])
+  @@index([createdAt])
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  imageUrl    String?
+  quantity    Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  sellerId    String
+
+  seller      User     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  orders      Order[]
+
+  @@index([sellerId])
+  @@index([isActive])
+}
+
+model Order {
+  id          String   @id @default(cuid())
+  productId   String
+  buyerId     String
+  quantity    Int      @default(1)
+  totalPrice  Float
+  status      String   @default("pending") // pending, paid (honor system)
+  createdAt   DateTime @default(now())
+
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  buyer       User     @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([buyerId])
+  @@index([status])
+}
+
+model Tournament {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  status        String   @default("upcoming") // upcoming, active, completed
+  startDate     DateTime?
+  endDate       DateTime?
+  maxPlayers    Int      @default(8)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  participants  TournamentParticipant[]
+  matches       TournamentMatch[]
+
+  @@index([status])
+}
+
+model TournamentParticipant {
+  id            String   @id @default(cuid())
+  tournamentId  String
+  userId        String
+  joinedAt      DateTime @default(now())
+  isEliminated  Boolean  @default(false)
+
+  tournament    Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, userId])
+  @@index([tournamentId])
+  @@index([userId])
+}
+
+model TournamentMatch {
+  id            String   @id @default(cuid())
+  tournamentId  String
+  round         Int
+  player1Id     String?
+  player2Id     String?
+  winnerId      String?
+  status        String   @default("pending") // pending, active, completed
+  createdAt     DateTime @default(now())
+  completedAt   DateTime?
+
+  tournament    Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  player1       User?      @relation("MatchPlayer", fields: [player1Id], references: [id], onDelete: SetNull)
+  games         Game[]
+
+  @@index([tournamentId])
+  @@index([round])
+  @@index([status])
+}
