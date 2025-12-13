@@ -18,10 +18,7 @@ export default function Header() {
 
   async function handleLogout() {
     try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include', // Include cookies for auth
-      })
+      await fetch('/api/auth/logout', { method: 'POST' })
       logout()
       router.push('/login')
       toast.success('Logged out successfully')

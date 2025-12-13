@@ -18,9 +18,7 @@ export default function GamePage() {
     const loadUser = async () => {
       if (!user) {
         try {
-          const res = await fetch('/api/auth/me', {
-            credentials: 'include', // Include cookies for auth
-          })
+          const res = await fetch('/api/auth/me')
           const data = await res.json()
           if (res.ok && data.user) {
             setUser(data.user)

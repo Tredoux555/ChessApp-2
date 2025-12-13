@@ -17,6 +17,9 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
     title: 'Riddick Chess',
   },
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
 }
 
 export default function RootLayout({
@@ -28,7 +31,6 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" href="/icon-192x192.png" />
       </head>
       <body className={`${inter.className} antialiased`}>
         <Providers>
