@@ -13,7 +13,9 @@ export default function Home() {
   useEffect(() => {
     async function checkAuth() {
       try {
-        const res = await fetch('/api/auth/me')
+        const res = await fetch('/api/auth/me', {
+          credentials: 'include', // Include cookies for auth
+        })
         const data = await res.json()
         
         if (data.user) {
