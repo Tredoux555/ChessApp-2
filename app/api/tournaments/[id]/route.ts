@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 
+// Tournament API route - fixed schema mismatches
+
 interface Params {
   params: { id: string }
 }
