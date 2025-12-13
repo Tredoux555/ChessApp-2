@@ -59,7 +59,7 @@ export default function NotificationListener() {
       gameId: string
       playerName: string
     }) => {
-      toast.info(`Your turn! ${data.playerName} made a move`, {
+      toast(`Your turn! ${data.playerName} made a move`, {
         icon: '♟️',
         duration: 3000,
       })
