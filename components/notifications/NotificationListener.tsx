@@ -53,29 +53,35 @@ export default function NotificationListener() {
     }) => {
       const senderName = data.sender.displayName || data.sender.username
       toast(
-        (t) => (
-          <div className="flex flex-col">
-            <span className="font-semibold">{senderName} sent you a friend request!</span>
-            <div className="flex gap-2 mt-2">
-              <button
-                onClick={() => {
-                  toast.dismiss(t.id)
-                  // Navigate to chat page where they can accept
-                  router.push('/chat')
-                }}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded text-sm font-semibold"
-              >
-                View
-              </button>
-              <button
-                onClick={() => toast.dismiss(t.id)}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-1 rounded text-sm font-semibold"
-              >
-                Dismiss
-              </button>
+        (t) => {
+          const handleView = () => {
+            toast.dismiss(t.id)
+            router.push('/chat')
+          }
+          const handleDismiss = () => {
+            toast.dismiss(t.id)
+          }
+          
+          return (
+            <div className="flex flex-col">
+              <span className="font-semibold">{senderName} sent you a friend request!</span>
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={handleView}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded text-sm font-semibold"
+                >
+                  View
+                </button>
+                <button
+                  onClick={handleDismiss}
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-1 rounded text-sm font-semibold"
+                >
+                  Dismiss
+                </button>
+              </div>
             </div>
-          </div>
-        ),
+          )
+        },
         {
           duration: 10000,
           icon: '👤',
