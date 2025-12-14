@@ -89,7 +89,7 @@ export default function GameControls({
             gameId,
             state: { 
               status: playerColor === 'w' ? 'draw_offered_white' : 'draw_offered_black',
-              result: data.game?.result || result
+              result: data.game?.result || undefined
             }
           })
         }
