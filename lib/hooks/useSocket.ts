@@ -12,10 +12,18 @@ export function useSocket() {
   useEffect(() => {
     if (!user) return
 
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3000'
+    // Use the same origin for socket connection (works in both dev and production)
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 
+                     (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
+    
+    console.log('Initializing socket connection to:', socketUrl)
+    
     const socketInstance: Socket = io(socketUrl, {
       path: '/api/socket',
       transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
     })
 
     socketInstance.on('connect', () => {

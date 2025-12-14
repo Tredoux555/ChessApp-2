@@ -49,7 +49,13 @@ app.prepare().then(() => {
     // Join game room
     socket.on('join-game', (gameId) => {
       socket.join(`game:${gameId}`)
-      console.log(`Socket ${socket.id} joined game ${gameId}`)
+      const userId = connectedUsers.get(socket.id) || 'unknown'
+      console.log(`[JOIN] Socket ${socket.id} (user ${userId}) joined game ${gameId}`)
+      
+      // Verify room membership
+      const room = io.sockets.adapter.rooms.get(`game:${gameId}`)
+      const roomSize = room ? room.size : 0
+      console.log(`[JOIN] Game ${gameId} now has ${roomSize} socket(s)`)
     })
 
     // Leave game room
@@ -60,13 +66,22 @@ app.prepare().then(() => {
 
     // Chess move made
     socket.on('move', (data) => {
+      console.log(`[MOVE] Received move for game ${data.gameId} from socket ${socket.id}`)
+      console.log(`[MOVE] FEN: ${data.fen?.substring(0, 50)}...`)
+      console.log(`[MOVE] Times - White: ${data.whiteTimeLeft}, Black: ${data.blackTimeLeft}`)
+      
+      // Get all sockets in the game room
+      const room = io.sockets.adapter.rooms.get(`game:${data.gameId}`)
+      const roomSize = room ? room.size : 0
+      console.log(`[MOVE] Room size for game ${data.gameId}: ${roomSize}`)
+      
       // Broadcast to all other players in the game room (not the sender)
       socket.to(`game:${data.gameId}`).emit('move-made', {
         ...data,
         whiteTimeLeft: data.whiteTimeLeft,
         blackTimeLeft: data.blackTimeLeft,
       })
-      console.log(`Move broadcast to game ${data.gameId} from socket ${socket.id}`)
+      console.log(`[MOVE] Broadcast sent to game ${data.gameId} (excluding sender ${socket.id})`)
     })
 
     // Game state update

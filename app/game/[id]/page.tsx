@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/stores/useAuthStore'
+import { useSocket } from '@/lib/hooks/useSocket'
 import ChessGame from '@/components/chess/ChessGame'
 import toast from 'react-hot-toast'
 
@@ -12,6 +13,8 @@ export default function GamePage() {
   const { user, setUser, isLoading: authLoading } = useAuthStore()
   const [game, setGame] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
+  // Initialize socket connection for this page
+  useSocket()
 
   // Load user if not already loaded
   useEffect(() => {

@@ -52,14 +52,33 @@ export default function ChessGame({
   const isGameActive = status === 'active' || status.includes('draw_offered')
   
 
-  // Join game room
+  // Join game room - ensure socket is connected first
   useEffect(() => {
     if (!socket || !gameId) return
 
-    socket.emit('join-game', gameId)
+    const joinGame = () => {
+      if (socket.connected) {
+        console.log(`Joining game room: ${gameId}`)
+        socket.emit('join-game', gameId)
+      } else {
+        console.log('Socket not connected yet, waiting...')
+        // Wait for connection
+        const connectHandler = () => {
+          console.log(`Socket connected, joining game room: ${gameId}`)
+          socket.emit('join-game', gameId)
+          socket.off('connect', connectHandler)
+        }
+        socket.on('connect', connectHandler)
+      }
+    }
+
+    joinGame()
 
     return () => {
-      socket.emit('leave-game', gameId)
+      if (socket.connected) {
+        console.log(`Leaving game room: ${gameId}`)
+        socket.emit('leave-game', gameId)
+      }
     }
   }, [socket, gameId])
 
@@ -71,8 +90,13 @@ export default function ChessGame({
       if (data.gameId === gameId) {
         console.log('Received move via socket:', data)
         try {
+          // Load the new position into the Chess object
+          const newGame = new Chess(data.fen)
           game.load(data.fen)
           setFen(data.fen)
+          
+          console.log('Move applied successfully. New FEN:', data.fen)
+          console.log('New turn:', newGame.turn())
           
           // Sync times from server
           if (data.whiteTimeLeft !== undefined) {
@@ -81,9 +105,15 @@ export default function ChessGame({
           if (data.blackTimeLeft !== undefined) {
             setBlackTime(data.blackTimeLeft)
           }
+          
+          // Show a subtle notification that opponent moved
+          toast(`Opponent moved`, { icon: '♟️', duration: 2000 })
         } catch (error) {
           console.error('Error loading move:', error)
+          toast.error('Error applying opponent\'s move')
         }
+      } else {
+        console.log('Received move for different game:', data.gameId, 'current game:', gameId)
       }
     }
 
@@ -265,33 +295,42 @@ export default function ChessGame({
       toast.success(`Moved ${sourceSquare} to ${targetSquare}`)
 
       // Emit move IMMEDIATELY via socket (before API call for instant update)
-      if (socket && socket.connected) {
-        // Calculate time after move (switch turns, so decrement current player's time)
-        const newWhiteTime = playerColor === 'w' ? Math.max(0, whiteTime - 1) : whiteTime
-        const newBlackTime = playerColor === 'b' ? Math.max(0, blackTime - 1) : blackTime
-        
-        socket.emit('move', {
-          gameId,
-          move,
-          fen: newFen,
-          pgn: newPgn,
-          whiteTimeLeft: newWhiteTime,
-          blackTimeLeft: newBlackTime,
-        })
-        
-        // Update local times immediately
-        setWhiteTime(newWhiteTime)
-        setBlackTime(newBlackTime)
-        
-        // Notify opponent it's their turn
-        const opponentId = playerColor === 'w' ? blackPlayer.id : whitePlayer.id
-        socket.emit('move-notification', {
-          gameId,
-          opponentId,
-          playerName: user?.displayName || user?.username || 'Opponent',
-        })
+      if (socket) {
+        if (socket.connected) {
+          // Calculate time after move (switch turns, so decrement current player's time)
+          const newWhiteTime = playerColor === 'w' ? Math.max(0, whiteTime - 1) : whiteTime
+          const newBlackTime = playerColor === 'b' ? Math.max(0, blackTime - 1) : blackTime
+          
+          console.log(`Emitting move to game ${gameId}:`, { fen: newFen, whiteTime: newWhiteTime, blackTime: newBlackTime })
+          
+          socket.emit('move', {
+            gameId,
+            move,
+            fen: newFen,
+            pgn: newPgn,
+            whiteTimeLeft: newWhiteTime,
+            blackTimeLeft: newBlackTime,
+          })
+          
+          // Update local times immediately
+          setWhiteTime(newWhiteTime)
+          setBlackTime(newBlackTime)
+          
+          // Notify opponent it's their turn
+          const opponentId = playerColor === 'w' ? blackPlayer.id : whitePlayer.id
+          socket.emit('move-notification', {
+            gameId,
+            opponentId,
+            playerName: user?.displayName || user?.username || 'Opponent',
+          })
+        } else {
+          console.error('Socket not connected! Cannot emit move in real-time.')
+          console.log('Socket state:', { connected: socket.connected, id: socket.id })
+          toast.error('Connection lost. Move will be saved but may not appear in real-time.')
+        }
       } else {
-        console.warn('Socket not connected, move may not reflect in real-time')
+        console.error('Socket is null! Cannot emit move.')
+        toast.error('Socket not initialized. Move will be saved but may not appear in real-time.')
       }
 
       // Update game state in database (async, but don't block)
