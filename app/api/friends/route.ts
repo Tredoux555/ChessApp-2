@@ -174,6 +174,9 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // Note: Socket event should be emitted by client after successful creation
+    // This allows the client to handle the socket connection properly
+
     return NextResponse.json({ friendship })
   } catch (error: any) {
     console.error('Send friend request error:', error)

@@ -47,16 +47,54 @@ export default function NotificationListener() {
       })
     }
 
+    // Listen for friend request notifications
+    const handleFriendRequest = (data: {
+      sender: { id: string; username: string; displayName?: string }
+    }) => {
+      const senderName = data.sender.displayName || data.sender.username
+      toast(
+        (t) => (
+          <div className="flex flex-col">
+            <span className="font-semibold">{senderName} sent you a friend request!</span>
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={() => {
+                  toast.dismiss(t.id)
+                  // Navigate to chat page where they can accept
+                  router.push('/chat')
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded text-sm font-semibold"
+              >
+                View
+              </button>
+              <button
+                onClick={() => toast.dismiss(t.id)}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-1 rounded text-sm font-semibold"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        ),
+        {
+          duration: 10000,
+          icon: '👤',
+        }
+      )
+    }
+
     socket.on('game-challenge', handleGameChallenge)
     socket.on('move-notification', handleMoveNotification)
     socket.on('challenge-declined', handleChallengeDeclined)
+    socket.on('new-friend-request', handleFriendRequest)
 
     return () => {
       socket.off('game-challenge', handleGameChallenge)
       socket.off('move-notification', handleMoveNotification)
       socket.off('challenge-declined', handleChallengeDeclined)
+      socket.off('new-friend-request', handleFriendRequest)
     }
-  }, [socket, user])
+  }, [socket, user, router])
 
   const handleAccept = async () => {
     if (!activeChallenge) return

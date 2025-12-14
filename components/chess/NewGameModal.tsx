@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/stores/useAuthStore'
 import { useSocketStore } from '@/lib/stores/useSocketStore'
+import SendFriendRequest from '@/components/friends/SendFriendRequest'
 import toast from 'react-hot-toast'
 
 interface NewGameModalProps {
@@ -207,33 +208,45 @@ export default function NewGameModal({ onClose }: NewGameModalProps) {
                       const resultUser = result.user || result
                       const displayName = resultUser.displayName || resultUser.username
                       return (
-                        <button
+                        <div
                           key={resultUser.id}
-                          onClick={() => {
-                            setSelectedOpponent(resultUser)
-                            setSearchQuery('') // Clear search when selected
-                            setSearchResults([])
-                          }}
-                          className={`w-full p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition border-b border-gray-100 dark:border-gray-800 last:border-b-0 ${
+                          className={`w-full p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition border-b border-gray-100 dark:border-gray-800 last:border-b-0 ${
                             selectedOpponent?.id === resultUser.id
                               ? 'bg-blue-50 dark:bg-blue-900'
                               : ''
                           }`}
                         >
-                          <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0">
-                              {resultUser.username.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-gray-900 dark:text-white truncate">
-                                {displayName}
-                              </p>
-                              <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                                @{resultUser.username}
-                              </p>
+                          <div className="flex items-center justify-between gap-3">
+                            <button
+                              onClick={() => {
+                                setSelectedOpponent(resultUser)
+                                setSearchQuery('') // Clear search when selected
+                                setSearchResults([])
+                              }}
+                              className="flex items-center space-x-3 flex-1 min-w-0 text-left"
+                            >
+                              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0">
+                                {resultUser.username.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-gray-900 dark:text-white truncate">
+                                  {displayName}
+                                </p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                                  @{resultUser.username}
+                                </p>
+                              </div>
+                            </button>
+                            <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                              <SendFriendRequest
+                                userId={resultUser.id}
+                                username={resultUser.username}
+                                displayName={displayName}
+                                className="text-xs"
+                              />
                             </div>
                           </div>
-                        </button>
+                        </div>
                       )
                     })}
                   </div>
