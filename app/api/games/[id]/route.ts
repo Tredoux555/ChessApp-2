@@ -102,59 +102,6 @@ export async function PUT(
     let updatedGame
 
     switch (action) {
-      case 'accept-challenge':
-        // Only pending games can be accepted
-        if (game.status !== 'pending') {
-          return NextResponse.json(
-            { error: 'Game is not pending acceptance' },
-            { status: 400 }
-          )
-        }
-        
-        // Since colors are randomly assigned, the challenged player could be either white or black
-        // Check if the current user is a participant in this game
-        const isParticipant = game.whitePlayerId === session.id || game.blackPlayerId === session.id
-        
-        if (!isParticipant) {
-          return NextResponse.json(
-            { error: 'You are not a participant in this game' },
-            { status: 403 }
-          )
-        }
-        
-        // Note: We allow either participant to accept because:
-        // 1. The creator already created the game, so they don't need to accept
-        // 2. Only the challenged player receives the notification
-        // 3. If somehow both try to accept, the first one wins (idempotent)
-        
-        // Activate the game and start the timer
-        updatedGame = await prisma.game.update({
-          where: { id: gameId },
-          data: {
-            status: 'active',
-            lastMoveAt: new Date(), // Start timer now
-          },
-          include: {
-            whitePlayer: {
-              select: {
-                id: true,
-                username: true,
-                displayName: true,
-                profileImage: true,
-              },
-            },
-            blackPlayer: {
-              select: {
-                id: true,
-                username: true,
-                displayName: true,
-                profileImage: true,
-              },
-            },
-          },
-        })
-        break
-
       case 'move':
         // Update FEN, PGN, times, and last move timestamp
         updatedGame = await prisma.game.update({
