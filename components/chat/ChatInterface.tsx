@@ -20,7 +20,7 @@ export default function ChatInterface({ friendId, friendName }: ChatInterfacePro
   useEffect(() => {
     async function fetchMessages() {
       try {
-        const res = await fetch(`/api/messages?friendId=${friendId}`)
+        const res = await fetch(`/api/messages?userId=${friendId}`)
         const data = await res.json()
         if (res.ok) {
           setMessages(data.messages || [])

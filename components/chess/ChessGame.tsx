@@ -50,6 +50,7 @@ export default function ChessGame({
   const playerColor = user?.id === whitePlayer?.id ? 'w' : user?.id === blackPlayer?.id ? 'b' : null
   const isPlayerTurn = playerColor !== null && game.turn() === playerColor
   const isGameActive = status === 'active' || status.includes('draw_offered')
+  const isPending = status === 'pending'
   
 
   // Join game room - ensure socket is connected first
@@ -197,8 +198,9 @@ export default function ChessGame({
   }, [socket, gameId, game, status, result])
 
   // Time countdown - only decrement locally, server will sync
+  // IMPORTANT: Only start timer if game status is 'active' (not 'pending')
   useEffect(() => {
-    if (!isGameActive) return
+    if (!isGameActive || status !== 'active') return
 
     const interval = setInterval(() => {
       // Only countdown if it's the active player's turn
@@ -210,7 +212,7 @@ export default function ChessGame({
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [isGameActive, game.turn(), whiteTime, blackTime])
+  }, [isGameActive, status, game.turn(), whiteTime, blackTime])
 
   // Periodic time sync from server every 5 seconds
   useEffect(() => {
@@ -261,6 +263,11 @@ export default function ChessGame({
   }
 
   function onDrop(sourceSquare: string, targetSquare: string) {
+    if (isPending) {
+      toast.error('Game has not been accepted yet')
+      return false
+    }
+    
     if (!isGameActive) {
       toast.error('Game is not active')
       return false
@@ -533,6 +540,20 @@ export default function ChessGame({
           }}
         />
       </div>
+
+      {/* Show waiting message if game is pending */}
+      {status === 'pending' && (
+        <div className="text-center p-6 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-2 border-yellow-400 mt-4">
+          <p className="text-lg font-semibold text-yellow-800 dark:text-yellow-200">
+            ⏳ Waiting for opponent to accept challenge...
+          </p>
+          {playerColor === 'b' && (
+            <p className="text-sm text-yellow-600 dark:text-yellow-300 mt-2">
+              You need to accept this challenge to start the game
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Show controls for active players */}
       {isGameActive && playerColor !== null && !isSpectator && (

@@ -60,9 +60,36 @@ export default function NotificationListener() {
 
   const handleAccept = async () => {
     if (!activeChallenge) return
-    
-    router.push(`/game/${activeChallenge.gameId}`)
-    setActiveChallenge(null)
+
+    try {
+      // First accept the challenge via API
+      const res = await fetch(`/api/games/${activeChallenge.gameId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'accept-challenge',
+        }),
+      })
+
+      if (res.ok) {
+        // Emit socket event to notify challenger
+        if (socket) {
+          socket.emit('game-update', {
+            gameId: activeChallenge.gameId,
+            state: { status: 'active' }
+          })
+        }
+        // Navigate to game
+        router.push(`/game/${activeChallenge.gameId}`)
+        setActiveChallenge(null)
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Failed to accept challenge')
+      }
+    } catch (error) {
+      console.error('Accept challenge error:', error)
+      toast.error('An error occurred')
+    }
   }
 
   const handleDecline = async () => {

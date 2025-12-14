@@ -102,6 +102,51 @@ export async function PUT(
     let updatedGame
 
     switch (action) {
+      case 'accept-challenge':
+        // Only the challenged player (black player) can accept
+        if (game.blackPlayerId !== session.id) {
+          return NextResponse.json(
+            { error: 'Only the challenged player can accept' },
+            { status: 403 }
+          )
+        }
+        
+        // Only pending games can be accepted
+        if (game.status !== 'pending') {
+          return NextResponse.json(
+            { error: 'Game is not pending acceptance' },
+            { status: 400 }
+          )
+        }
+        
+        // Activate the game and start the timer
+        updatedGame = await prisma.game.update({
+          where: { id: gameId },
+          data: {
+            status: 'active',
+            lastMoveAt: new Date(), // Start timer now
+          },
+          include: {
+            whitePlayer: {
+              select: {
+                id: true,
+                username: true,
+                displayName: true,
+                profileImage: true,
+              },
+            },
+            blackPlayer: {
+              select: {
+                id: true,
+                username: true,
+                displayName: true,
+                profileImage: true,
+              },
+            },
+          },
+        })
+        break
+
       case 'move':
         // Update FEN, PGN, times, and last move timestamp
         updatedGame = await prisma.game.update({
