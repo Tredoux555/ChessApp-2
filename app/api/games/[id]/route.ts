@@ -307,6 +307,44 @@ export async function PUT(
         })
         break
 
+      case 'decline-challenge':
+        // Only black player (challenged player) can decline
+        if (game.blackPlayerId !== session.id) {
+          return NextResponse.json(
+            { error: 'Only the challenged player can decline' },
+            { status: 403 }
+          )
+        }
+        
+        // Cancel the game
+        updatedGame = await prisma.game.update({
+          where: { id: gameId },
+          data: {
+            status: 'completed',
+            result: 'cancelled',
+            completedAt: new Date(),
+          },
+          include: {
+            whitePlayer: {
+              select: {
+                id: true,
+                username: true,
+                displayName: true,
+                profileImage: true,
+              },
+            },
+            blackPlayer: {
+              select: {
+                id: true,
+                username: true,
+                displayName: true,
+                profileImage: true,
+              },
+            },
+          },
+        })
+        break
+
       case 'close-game':
         // Only white player (game creator) can close the game
         if (game.whitePlayerId !== session.id) {

@@ -48,26 +48,34 @@ export default function NewGameModal({ onClose }: NewGameModalProps) {
 
     setIsSearching(true)
     try {
-      const res = await fetch(`/api/profile?search=${encodeURIComponent(searchQuery)}`)
+      const res = await fetch(`/api/profile?search=${encodeURIComponent(searchQuery.trim())}`)
       const data = await res.json()
       if (res.ok) {
-        setSearchResults(data.users || [])
+        // Sort results alphabetically by username/displayName
+        const sorted = (data.users || []).sort((a: any, b: any) => {
+          const aName = (a.displayName || a.username).toLowerCase()
+          const bName = (b.displayName || b.username).toLowerCase()
+          return aName.localeCompare(bName)
+        })
+        setSearchResults(sorted)
       }
     } catch (error) {
       console.error('Error searching users:', error)
+      setSearchResults([])
     } finally {
       setIsSearching(false)
     }
   }
 
   useEffect(() => {
+    // Real-time search with minimal debounce for better UX
     const timeoutId = setTimeout(() => {
       if (searchQuery.trim()) {
         searchUsers()
       } else {
         setSearchResults([])
       }
-    }, 500)
+    }, 150) // Reduced from 500ms to 150ms for more responsive feel
 
     return () => clearTimeout(timeoutId)
   }, [searchQuery])
@@ -170,47 +178,70 @@ export default function NewGameModal({ onClose }: NewGameModalProps) {
             </label>
 
             {/* Search */}
-            <div className="mb-4">
+            <div className="mb-4 relative">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search for users..."
+                placeholder="Search for users... (type to search)"
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                autoFocus
               />
+              {isSearching && searchQuery.trim() && (
+                <div className="absolute right-3 top-2.5">
+                  <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
             </div>
 
             {/* Search Results */}
-            {searchResults.length > 0 && (
-              <div className="mb-4 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg">
-                {searchResults.map((result) => {
-                  const resultUser = result.user || result
-                  return (
-                    <button
-                      key={resultUser.id}
-                      onClick={() => setSelectedOpponent(resultUser)}
-                      className={`w-full p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition ${
-                        selectedOpponent?.id === resultUser.id
-                          ? 'bg-blue-50 dark:bg-blue-900'
-                          : ''
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
-                          {resultUser.username.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900 dark:text-white">
-                            {resultUser.displayName || resultUser.username}
-                          </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            @{resultUser.username}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  )
-                })}
+            {searchQuery.trim() && (
+              <div className="mb-4">
+                {isSearching && searchResults.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
+                    Searching...
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  <div className="max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg">
+                    {searchResults.map((result) => {
+                      const resultUser = result.user || result
+                      const displayName = resultUser.displayName || resultUser.username
+                      return (
+                        <button
+                          key={resultUser.id}
+                          onClick={() => {
+                            setSelectedOpponent(resultUser)
+                            setSearchQuery('') // Clear search when selected
+                            setSearchResults([])
+                          }}
+                          className={`w-full p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition border-b border-gray-100 dark:border-gray-800 last:border-b-0 ${
+                            selectedOpponent?.id === resultUser.id
+                              ? 'bg-blue-50 dark:bg-blue-900'
+                              : ''
+                          }`}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0">
+                              {resultUser.username.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-900 dark:text-white truncate">
+                                {displayName}
+                              </p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                                @{resultUser.username}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm border border-gray-200 dark:border-gray-700 rounded-lg">
+                    No users found matching "{searchQuery}"
+                  </div>
+                )}
               </div>
             )}
 

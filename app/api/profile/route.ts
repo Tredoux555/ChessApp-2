@@ -8,15 +8,16 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
 
-    if (!search || search.trim().length < 2) {
+    if (!search || search.trim().length < 1) {
       return NextResponse.json({ users: [] })
     }
 
-    const users = await prisma.user.findMany({
+    const searchLower = search.toLowerCase().trim()
+
+    // Fetch users that match the search (case-insensitive search)
+    // Prisma's contains is case-sensitive, so we'll fetch more and filter in memory
+    const allUsers = await prisma.user.findMany({
       where: {
-        username: {
-          contains: search,
-        },
         isBanned: false,
       },
       select: {
@@ -25,10 +26,31 @@ export async function GET(request: NextRequest) {
         displayName: true,
         profileImage: true,
       },
-      take: 10,
     })
 
-    return NextResponse.json({ users })
+    // Filter users that match the search query (case-insensitive)
+    const matchingUsers = allUsers.filter((user) => {
+      const username = user.username.toLowerCase()
+      const displayName = (user.displayName || user.username).toLowerCase()
+      return username.includes(searchLower) || displayName.includes(searchLower)
+    })
+
+    // Sort alphabetically: prioritize startsWith matches, then by username/displayName
+    const sortedUsers = matchingUsers.sort((a, b) => {
+      const aName = (a.displayName || a.username).toLowerCase()
+      const bName = (b.displayName || b.username).toLowerCase()
+      const aStartsWith = aName.startsWith(searchLower)
+      const bStartsWith = bName.startsWith(searchLower)
+      
+      // If one starts with search and the other doesn't, prioritize the one that starts
+      if (aStartsWith && !bStartsWith) return -1
+      if (!aStartsWith && bStartsWith) return 1
+      
+      // Otherwise sort alphabetically
+      return aName.localeCompare(bName)
+    }).slice(0, 20) // Limit to 20 results
+
+    return NextResponse.json({ users: sortedUsers })
   } catch (error: any) {
     if (error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

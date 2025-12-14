@@ -138,6 +138,13 @@ app.prepare().then(() => {
       })
     })
 
+    // Challenge declined notification
+    socket.on('challenge-declined', (data) => {
+      io.to(`user:${data.challengerId}`).emit('challenge-declined', {
+        gameId: data.gameId,
+      })
+    })
+
     // Disconnect
     socket.on('disconnect', () => {
       const userId = connectedUsers.get(socket.id)

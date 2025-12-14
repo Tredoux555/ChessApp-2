@@ -50,6 +50,7 @@ export default function ChessGame({
   const playerColor = user?.id === whitePlayer?.id ? 'w' : user?.id === blackPlayer?.id ? 'b' : null
   const isPlayerTurn = playerColor !== null && game.turn() === playerColor
   const isGameActive = status === 'active' || status.includes('draw_offered')
+  
 
   // Join game room
   useEffect(() => {
