@@ -63,36 +63,77 @@ export default function ChessGame({
     }
   }, [socket, gameId])
 
-  // Listen for moves and time updates
+  // Listen for moves, time updates, draw offers, and game state changes
   useEffect(() => {
     if (!socket) return
 
     const handleMove = (data: any) => {
       if (data.gameId === gameId) {
-        game.load(data.fen)
-        setFen(data.fen)
-        
-        // Sync times from server
-        if (data.whiteTimeLeft !== undefined) {
-          setWhiteTime(data.whiteTimeLeft)
-        }
-        if (data.blackTimeLeft !== undefined) {
-          setBlackTime(data.blackTimeLeft)
+        console.log('Received move via socket:', data)
+        try {
+          game.load(data.fen)
+          setFen(data.fen)
+          
+          // Sync times from server
+          if (data.whiteTimeLeft !== undefined) {
+            setWhiteTime(data.whiteTimeLeft)
+          }
+          if (data.blackTimeLeft !== undefined) {
+            setBlackTime(data.blackTimeLeft)
+          }
+        } catch (error) {
+          console.error('Error loading move:', error)
         }
       }
     }
 
     const handleGameUpdate = (data: any) => {
       if (data.gameId === gameId) {
-        setStatus(data.state.status)
-        setResult(data.state.result)
-        // Sync times from server update
-        if (data.state.whiteTimeLeft !== undefined) {
-          setWhiteTime(data.state.whiteTimeLeft)
+        console.log('Received game update via socket:', data)
+        if (data.state) {
+          setStatus(data.state.status || status)
+          setResult(data.state.result || result)
+          // Sync times from server update
+          if (data.state.whiteTimeLeft !== undefined) {
+            setWhiteTime(data.state.whiteTimeLeft)
+          }
+          if (data.state.blackTimeLeft !== undefined) {
+            setBlackTime(data.state.blackTimeLeft)
+          }
         }
-        if (data.state.blackTimeLeft !== undefined) {
-          setBlackTime(data.state.blackTimeLeft)
+      }
+    }
+
+    const handleDrawOffered = (data: any) => {
+      if (data.gameId === gameId) {
+        console.log('Draw offer received:', data)
+        const newStatus = data.offererColor === 'w' ? 'draw_offered_white' : 'draw_offered_black'
+        setStatus(newStatus)
+        toast('Your opponent has offered a draw', { icon: '♟️' })
+      }
+    }
+
+    const handleDrawResponded = (data: any) => {
+      if (data.gameId === gameId) {
+        console.log('Draw response received:', data)
+        if (data.accepted) {
+          setStatus('completed')
+          setResult('draw')
+          toast.success('Draw accepted!')
+        } else {
+          setStatus('active')
+          toast('Draw offer declined', { icon: 'ℹ️' })
         }
+      }
+    }
+
+    const handlePlayerResigned = (data: any) => {
+      if (data.gameId === gameId) {
+        console.log('Player resigned:', data)
+        setStatus('completed')
+        const winner = data.resignerColor === 'w' ? 'black_wins' : 'white_wins'
+        setResult(winner)
+        toast('Your opponent has resigned', { icon: '🏳️' })
       }
     }
 
@@ -110,14 +151,20 @@ export default function ChessGame({
 
     socket.on('move-made', handleMove)
     socket.on('game-updated', handleGameUpdate)
+    socket.on('draw-offered', handleDrawOffered)
+    socket.on('draw-responded', handleDrawResponded)
+    socket.on('player-resigned', handlePlayerResigned)
     socket.on('time-sync', handleTimeSync)
 
     return () => {
       socket.off('move-made', handleMove)
       socket.off('game-updated', handleGameUpdate)
+      socket.off('draw-offered', handleDrawOffered)
+      socket.off('draw-responded', handleDrawResponded)
+      socket.off('player-resigned', handlePlayerResigned)
       socket.off('time-sync', handleTimeSync)
     }
-  }, [socket, gameId, game])
+  }, [socket, gameId, game, status, result])
 
   // Time countdown - only decrement locally, server will sync
   useEffect(() => {
@@ -125,15 +172,15 @@ export default function ChessGame({
 
     const interval = setInterval(() => {
       // Only countdown if it's the active player's turn
-      if (game.turn() === 'w') {
+      if (game.turn() === 'w' && whiteTime > 0) {
         setWhiteTime((t) => Math.max(0, t - 1))
-      } else {
+      } else if (game.turn() === 'b' && blackTime > 0) {
         setBlackTime((t) => Math.max(0, t - 1))
       }
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [isGameActive, game.turn()])
+  }, [isGameActive, game.turn(), whiteTime, blackTime])
 
   // Periodic time sync from server every 5 seconds
   useEffect(() => {
@@ -219,14 +266,22 @@ export default function ChessGame({
 
       // Emit move IMMEDIATELY via socket (before API call for instant update)
       if (socket && socket.connected) {
+        // Calculate time after move (switch turns, so decrement current player's time)
+        const newWhiteTime = playerColor === 'w' ? Math.max(0, whiteTime - 1) : whiteTime
+        const newBlackTime = playerColor === 'b' ? Math.max(0, blackTime - 1) : blackTime
+        
         socket.emit('move', {
           gameId,
           move,
           fen: newFen,
           pgn: newPgn,
-          whiteTimeLeft: whiteTime,
-          blackTimeLeft: blackTime,
+          whiteTimeLeft: newWhiteTime,
+          blackTimeLeft: newBlackTime,
         })
+        
+        // Update local times immediately
+        setWhiteTime(newWhiteTime)
+        setBlackTime(newBlackTime)
         
         // Notify opponent it's their turn
         const opponentId = playerColor === 'w' ? blackPlayer.id : whitePlayer.id
@@ -260,6 +315,7 @@ export default function ChessGame({
 
   async function updateGameState(fen: string, pgn: string): Promise<{ whiteTimeLeft: number; blackTimeLeft: number } | null> {
     try {
+      // Use current times (already updated from move)
       const res = await fetch(`/api/games/${gameId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -274,10 +330,25 @@ export default function ChessGame({
         }),
       })
       const data = await res.json()
-      // Update times from server response
+      
+      // Emit game update via socket with server response
+      if (socket && data.game) {
+        socket.emit('game-update', {
+          gameId,
+          state: {
+            status: data.game.status || status,
+            result: data.game.result || result,
+            whiteTimeLeft: data.game.whiteTimeLeft,
+            blackTimeLeft: data.game.blackTimeLeft,
+          }
+        })
+      }
+      
+      // Update times from server response (server is source of truth)
       if (data.game) {
         setWhiteTime(data.game.whiteTimeLeft || whiteTime)
         setBlackTime(data.game.blackTimeLeft || blackTime)
+        setStatus(data.game.status || status)
         return {
           whiteTimeLeft: data.game.whiteTimeLeft || whiteTime,
           blackTimeLeft: data.game.blackTimeLeft || blackTime,
@@ -439,19 +510,26 @@ export default function ChessGame({
       
 
       {status === 'completed' && (
-        <div className="text-center">
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">
+        <div className="text-center p-6 bg-gray-100 dark:bg-gray-800 rounded-lg">
+          <p className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
             Game Over
           </p>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
+          <p className="text-xl text-gray-700 dark:text-gray-300">
             {result === 'cancelled' 
-              ? 'Game Closed' 
+              ? 'Game Closed by Creator' 
               : result === 'draw' 
               ? 'Draw' 
               : result === 'white_wins' 
-              ? 'White Wins' 
-              : 'Black Wins'}
+              ? `${whitePlayer?.displayName || whitePlayer?.username || 'White'} Wins!` 
+              : result === 'black_wins'
+              ? `${blackPlayer?.displayName || blackPlayer?.username || 'Black'} Wins!`
+              : 'Game Ended'}
           </p>
+          {result === 'cancelled' && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+              The game creator closed this game
+            </p>
+          )}
         </div>
       )}
     </div>

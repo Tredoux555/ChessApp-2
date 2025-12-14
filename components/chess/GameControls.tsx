@@ -39,12 +39,22 @@ export default function GameControls({
       })
       
       if (res.ok) {
+        const data = await res.json()
         toast.success('You resigned')
-        // Emit game update via socket
+        // Emit resign via socket
         if (socket) {
+          socket.emit('resign', {
+            gameId,
+            resignerColor: playerColor,
+            resignerId: currentUserId,
+          })
+          // Also emit game update
           socket.emit('game-update', {
             gameId,
-            state: { status: 'completed' }
+            state: { 
+              status: 'completed',
+              result: data.game?.result || (playerColor === 'w' ? 'black_wins' : 'white_wins')
+            }
           })
         }
       } else {
@@ -65,13 +75,27 @@ export default function GameControls({
       })
       
       if (res.ok) {
+        const data = await res.json()
         toast.success('Draw offer sent')
-        // Emit game update via socket
+        // Emit draw offer via socket
         if (socket) {
+          socket.emit('draw-offer', {
+            gameId,
+            offererColor: playerColor,
+            offererId: currentUserId,
+          })
+          // Also emit game update
           socket.emit('game-update', {
             gameId,
-            state: { status: playerColor === 'w' ? 'draw_offered_white' : 'draw_offered_black' }
+            state: { 
+              status: playerColor === 'w' ? 'draw_offered_white' : 'draw_offered_black',
+              result: data.game?.result || result
+            }
           })
+        }
+        // Update local status
+        if (data.game) {
+          // Status will be updated via socket listener
         }
       } else {
         toast.error('Error offering draw')
@@ -94,12 +118,22 @@ export default function GameControls({
       })
       
       if (res.ok) {
+        const data = await res.json()
         toast.success(accept ? 'Draw accepted' : 'Draw declined')
-        // Emit game update via socket
+        // Emit draw response via socket
         if (socket) {
+          socket.emit('draw-response', {
+            gameId,
+            accepted: accept,
+            responderColor: playerColor,
+          })
+          // Also emit game update
           socket.emit('game-update', {
             gameId,
-            state: { status: accept ? 'completed' : 'active' }
+            state: { 
+              status: accept ? 'completed' : 'active',
+              result: accept ? 'draw' : undefined
+            }
           })
         }
       } else {
@@ -122,16 +156,21 @@ export default function GameControls({
       })
       
       if (res.ok) {
+        const data = await res.json()
         toast.success('Game closed')
         // Emit game update via socket to notify both players
         if (socket) {
           socket.emit('game-update', {
             gameId,
-            state: { status: 'completed', result: 'cancelled' }
+            state: { 
+              status: 'completed', 
+              result: 'cancelled',
+              whiteTimeLeft: data.game?.whiteTimeLeft,
+              blackTimeLeft: data.game?.blackTimeLeft,
+            }
           })
         }
-        // Redirect to dashboard after a short delay
-        setTimeout(() => router.push('/dashboard'), 1500)
+        // Don't redirect - let players see the result
       } else {
         const data = await res.json()
         toast.error(data.error || 'Error closing game')
