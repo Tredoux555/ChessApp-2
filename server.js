@@ -60,16 +60,20 @@ app.prepare().then(() => {
 
     // Chess move made
     socket.on('move', (data) => {
-      io.to(`game:${data.gameId}`).emit('move-made', {
+      // Broadcast to all other players in the game room (not the sender)
+      socket.to(`game:${data.gameId}`).emit('move-made', {
         ...data,
         whiteTimeLeft: data.whiteTimeLeft,
         blackTimeLeft: data.blackTimeLeft,
       })
+      console.log(`Move broadcast to game ${data.gameId} from socket ${socket.id}`)
     })
 
     // Game state update
     socket.on('game-update', (data) => {
-      io.to(`game:${data.gameId}`).emit('game-updated', data)
+      // Broadcast to all other players in the game room (not the sender)
+      socket.to(`game:${data.gameId}`).emit('game-updated', data)
+      console.log(`Game update broadcast to game ${data.gameId}`)
     })
 
     // Draw offer
