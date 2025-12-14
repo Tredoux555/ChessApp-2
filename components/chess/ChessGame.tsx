@@ -216,28 +216,30 @@ export default function ChessGame({
       setFen(newFen)
       toast.success(`Moved ${sourceSquare} to ${targetSquare}`)
 
-      // Update game state and emit move (async, but don't block)
-      updateGameState(newFen, newPgn).then((updatedState) => {
-        // Emit move to server with synced times
-        if (socket) {
-          socket.emit('move', {
-            gameId,
-            move,
-            fen: newFen,
-            pgn: newPgn,
-            whiteTimeLeft: updatedState?.whiteTimeLeft || whiteTime,
-            blackTimeLeft: updatedState?.blackTimeLeft || blackTime,
-          })
-          
-          // Notify opponent it's their turn
-          const opponentId = playerColor === 'w' ? blackPlayer.id : whitePlayer.id
-          socket.emit('move-notification', {
-            gameId,
-            opponentId,
-            playerName: user?.displayName || user?.username || 'Opponent',
-          })
-        }
-      })
+      // Emit move IMMEDIATELY via socket (before API call for instant update)
+      if (socket && socket.connected) {
+        socket.emit('move', {
+          gameId,
+          move,
+          fen: newFen,
+          pgn: newPgn,
+          whiteTimeLeft: whiteTime,
+          blackTimeLeft: blackTime,
+        })
+        
+        // Notify opponent it's their turn
+        const opponentId = playerColor === 'w' ? blackPlayer.id : whitePlayer.id
+        socket.emit('move-notification', {
+          gameId,
+          opponentId,
+          playerName: user?.displayName || user?.username || 'Opponent',
+        })
+      } else {
+        console.warn('Socket not connected, move may not reflect in real-time')
+      }
+
+      // Update game state in database (async, but don't block)
+      updateGameState(newFen, newPgn)
 
       // Check for game over
       if (game.isCheckmate()) {
@@ -424,7 +426,13 @@ export default function ChessGame({
       {/* Show controls for active players */}
       {isGameActive && playerColor !== null && !isSpectator && (
         <div className="mt-4">
-          <GameControls gameId={gameId} status={status} playerColor={playerColor} />
+          <GameControls 
+            gameId={gameId} 
+            status={status} 
+            playerColor={playerColor}
+            whitePlayerId={whitePlayer.id}
+            currentUserId={user?.id || ''}
+          />
         </div>
       )}
       
@@ -435,7 +443,13 @@ export default function ChessGame({
             Game Over
           </p>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
-            {result === 'draw' ? 'Draw' : result === 'white_wins' ? 'White Wins' : 'Black Wins'}
+            {result === 'cancelled' 
+              ? 'Game Closed' 
+              : result === 'draw' 
+              ? 'Draw' 
+              : result === 'white_wins' 
+              ? 'White Wins' 
+              : 'Black Wins'}
           </p>
         </div>
       )}

@@ -307,6 +307,51 @@ export async function PUT(
         })
         break
 
+      case 'close-game':
+        // Only white player (game creator) can close the game
+        if (game.whitePlayerId !== session.id) {
+          return NextResponse.json(
+            { error: 'Only the game creator can close the game' },
+            { status: 403 }
+          )
+        }
+        
+        // Only active games can be closed
+        if (game.status !== 'active' && !game.status.includes('draw_offered')) {
+          return NextResponse.json(
+            { error: 'Only active games can be closed' },
+            { status: 400 }
+          )
+        }
+        
+        updatedGame = await prisma.game.update({
+          where: { id: gameId },
+          data: {
+            status: 'completed',
+            result: 'cancelled',
+            completedAt: new Date(),
+          },
+          include: {
+            whitePlayer: {
+              select: {
+                id: true,
+                username: true,
+                displayName: true,
+                profileImage: true,
+              },
+            },
+            blackPlayer: {
+              select: {
+                id: true,
+                username: true,
+                displayName: true,
+                profileImage: true,
+              },
+            },
+          },
+        })
+        break
+
       case 'spectate':
         // Add user as spectator
         await prisma.spectator.upsert({
