@@ -6,7 +6,7 @@ import { useAuthStore } from '@/lib/stores/useAuthStore'
 import toast from 'react-hot-toast'
 
 export default function ProfileEditor() {
-  const { user, loadUser } = useAuthStore()
+  const { user, setUser } = useAuthStore()
   const [displayName, setDisplayName] = useState(user?.displayName || '')
   const [bio, setBio] = useState(user?.bio || '')
   const [profileImage, setProfileImage] = useState<string | null>(user?.profileImage || null)
@@ -14,6 +14,18 @@ export default function ProfileEditor() {
   const [isUploading, setIsUploading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const loadUser = async () => {
+    try {
+      const res = await fetch('/api/auth/me', { credentials: 'include' })
+      const data = await res.json()
+      if (res.ok && data.user) {
+        setUser(data.user)
+      }
+    } catch (error) {
+      console.error('Error loading user:', error)
+    }
+  }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
