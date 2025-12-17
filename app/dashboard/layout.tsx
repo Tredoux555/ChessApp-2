@@ -65,7 +65,7 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20 md:pb-0">
       <NotificationListener />
       <Header />
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="max-w-7xl mx-auto px-4 py-6 mb-20 md:mb-0">
         {children}
       </main>
       <MobileNav />
