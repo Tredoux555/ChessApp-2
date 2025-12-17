@@ -19,11 +19,23 @@ export default function MobileNav() {
     navItems.push({ href: '/admin', icon: '⚙️', label: 'Admin' })
   }
 
-  if (!user) return null
-
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-[9999] shadow-lg" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999 }}>
-      <div className="flex justify-around items-center h-16">
+    <nav 
+      className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t-2 border-gray-300 dark:border-gray-600 shadow-2xl"
+      style={{ 
+        position: 'fixed', 
+        bottom: 0, 
+        left: 0, 
+        right: 0, 
+        zIndex: 99999,
+        backgroundColor: 'rgb(255, 255, 255)',
+        display: 'block',
+        visibility: 'visible',
+        opacity: 1,
+        height: '64px'
+      }}
+    >
+      <div className="flex justify-around items-center h-16 px-2">
         {navItems.map((item) => {
           const isActive = pathname === item.href
           return (
