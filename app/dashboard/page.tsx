@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { useAuthStore } from '@/lib/stores/useAuthStore'
-import GamesList from '@/components/chess/GamesList'
 import NewGameModal from '@/components/chess/NewGameModal'
 
 export default function DashboardPage() {
@@ -68,8 +67,6 @@ export default function DashboardPage() {
           </div>
         </Link>
       </div>
-
-      <GamesList />
 
       {showNewGame && (
         <NewGameModal onClose={() => setShowNewGame(false)} />
