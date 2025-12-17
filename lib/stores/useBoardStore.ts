@@ -12,7 +12,7 @@ interface BoardStore {
 
 export const useBoardStore = create<BoardStore>((set, get) => ({
   boardTheme: 'brown',
-  pieceSet: 'default',
+  pieceSet: 'merida', // Chess.com style pieces by default
 
   setBoardTheme: (theme: string) => set({ boardTheme: theme }),
 
@@ -25,7 +25,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         const data = await response.json()
         set({
           boardTheme: data.user.boardTheme || 'brown',
-          pieceSet: data.user.pieceSet || 'default'
+          pieceSet: data.user.pieceSet || 'merida' // Chess.com style pieces by default
         })
       }
     } catch (error) {
