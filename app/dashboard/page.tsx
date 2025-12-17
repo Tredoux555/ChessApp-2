@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import { useAuthStore } from '@/lib/stores/useAuthStore'
 import GamesList from '@/components/chess/GamesList'
@@ -26,6 +27,46 @@ export default function DashboardPage() {
         >
           New Game
         </button>
+      </div>
+
+      {/* Quick Access Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Link
+          href="/dashboard/game-history"
+          className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition-shadow cursor-pointer"
+        >
+          <div className="flex items-center space-x-3">
+            <span className="text-3xl">📜</span>
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Game History</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">View past games</p>
+            </div>
+          </div>
+        </Link>
+        <Link
+          href="/settings/board"
+          className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition-shadow cursor-pointer"
+        >
+          <div className="flex items-center space-x-3">
+            <span className="text-3xl">🎨</span>
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Board Settings</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Customize themes</p>
+            </div>
+          </div>
+        </Link>
+        <Link
+          href="/profile"
+          className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition-shadow cursor-pointer"
+        >
+          <div className="flex items-center space-x-3">
+            <span className="text-3xl">👤</span>
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Profile</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Edit your profile</p>
+            </div>
+          </div>
+        </Link>
       </div>
 
       <GamesList />

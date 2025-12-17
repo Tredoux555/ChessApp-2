@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useTheme } from 'next-themes'
 import { useAuthStore } from '@/lib/stores/useAuthStore'
 import { useRouter } from 'next/navigation'
@@ -37,6 +38,25 @@ export default function Header() {
         </div>
 
         <div className="flex items-center space-x-4">
+          {/* Navigation Links */}
+          <div className="hidden md:flex items-center space-x-4">
+            <Link href="/dashboard" className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium">
+              Home
+            </Link>
+            <Link href="/dashboard/game-history" className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium">
+              Game History
+            </Link>
+            <Link href="/chat" className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium">
+              Chat
+            </Link>
+            <Link href="/marketplace" className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium">
+              Shop
+            </Link>
+            <Link href="/settings/board" className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium">
+              Settings
+            </Link>
+          </div>
+
           {/* Theme Toggle */}
           {mounted && (
             <button
@@ -48,7 +68,7 @@ export default function Header() {
           )}
 
           {/* Profile */}
-          <div className="flex items-center space-x-3">
+          <Link href="/profile" className="flex items-center space-x-3 hover:opacity-80">
             {user?.profileImage ? (
               <img
                 src={user.profileImage}
@@ -65,7 +85,7 @@ export default function Header() {
                 ADMIN
               </span>
             )}
-          </div>
+          </Link>
 
           {/* Logout */}
           <button
