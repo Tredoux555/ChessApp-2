@@ -276,6 +276,12 @@ export default function ChessGame({
       return false
     }
 
+    if (!socket || !socket.connected) {
+      console.error('Socket not connected, cannot make move')
+      toast.error('Connection lost. Please refresh the page.')
+      return false
+    }
+
     try {
       const move = game.move({
         from: sourceSquare,
@@ -294,20 +300,44 @@ export default function ChessGame({
       // FEATURE 1: Update last move
       setLastMove({ from: sourceSquare, to: targetSquare })
 
-      // Send move to server
+      // Calculate time left (simplified - in production, calculate based on time control)
+      const currentTime = Date.now()
+      const timeElapsed = Math.floor((currentTime - (game.history().length * 1000)) / 1000) // Simplified
+      const newWhiteTime = isPlayerWhite ? whiteTime - timeElapsed : whiteTime
+      const newBlackTime = isPlayerBlack ? blackTime - timeElapsed : blackTime
+
+      // Emit move via socket FIRST for real-time updates
+      socket.emit('move', {
+        gameId,
+        fen: newFen,
+        pgn: newPgn,
+        move: { from: sourceSquare, to: targetSquare },
+        whiteTimeLeft: newWhiteTime > 0 ? newWhiteTime : 0,
+        blackTimeLeft: newBlackTime > 0 ? newBlackTime : 0,
+      })
+
+      // Then send move to API for persistence
       fetch(`/api/games/${gameId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'move',
-          fen: newFen,
-          pgn: newPgn,
-          move: { from: sourceSquare, to: targetSquare }
+          data: {
+            fen: newFen,
+            pgn: newPgn,
+            whiteTimeLeft: newWhiteTime > 0 ? newWhiteTime : 0,
+            blackTimeLeft: newBlackTime > 0 ? newBlackTime : 0,
+            move: { from: sourceSquare, to: targetSquare }
+          }
         })
+      }).catch(error => {
+        console.error('Failed to save move to server:', error)
+        toast.error('Failed to save move. Please refresh.')
       })
 
       return true
     } catch (error) {
+      console.error('Move error:', error)
       return false
     }
   }
