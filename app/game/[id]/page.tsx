@@ -177,7 +177,6 @@ export default function GamePage() {
         blackTimeLeft={game.blackTimeLeft || game.timeControl}
         status={game.status}
         result={game.result || undefined}
-        isSpectator={isSpectator}
       />
     </div>
   )

@@ -1,261 +1,126 @@
+// components/chess/GameControls.tsx
 'use client'
 
 import { useState } from 'react'
-import toast from 'react-hot-toast'
-import { useRouter } from 'next/navigation'
 import { useSocketStore } from '@/lib/stores/useSocketStore'
+import { useAuthStore } from '@/lib/stores/useAuthStore'
+import toast from 'react-hot-toast'
 
 interface GameControlsProps {
   gameId: string
   status: string
-  playerColor: 'w' | 'b' | null
-  whitePlayerId: string
-  currentUserId: string
+  isSpectator: boolean
+  isMyTurn: boolean
+  onGoToDashboard: () => void
 }
 
-export default function GameControls({ 
-  gameId, 
-  status, 
-  playerColor,
-  whitePlayerId,
-  currentUserId
+export default function GameControls({
+  gameId,
+  status,
+  isSpectator,
+  isMyTurn,
+  onGoToDashboard
 }: GameControlsProps) {
-  const [isOfferingDraw, setIsOfferingDraw] = useState(false)
-  const [isClosing, setIsClosing] = useState(false)
-  const router = useRouter()
+  const [isProcessing, setIsProcessing] = useState(false)
   const { socket } = useSocketStore()
+  const { user } = useAuthStore()
 
-  const isGameCreator = currentUserId === whitePlayerId
-  const isGameActive = status === 'active' || status.includes('draw_offered')
+  const handleOfferDraw = async () => {
+    if (isProcessing) return
+    
+    setIsProcessing(true)
+    try {
+      const response = await fetch(`/api/games/${gameId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'offer-draw' })
+      })
 
-  async function handleResign() {
+      if (response.ok) {
+        socket?.emit('draw-offer', { gameId, playerId: user?.id })
+        toast.success('Draw offer sent')
+      } else {
+        toast.error('Failed to offer draw')
+      }
+    } catch (error) {
+      console.error('Draw offer error:', error)
+      toast.error('Failed to offer draw')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleResign = async () => {
+    if (isProcessing) return
     if (!confirm('Are you sure you want to resign?')) return
 
+    setIsProcessing(true)
     try {
-      const res = await fetch(`/api/games/${gameId}`, {
+      const response = await fetch(`/api/games/${gameId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'resign' }),
+        body: JSON.stringify({ action: 'resign' })
       })
-      
-      if (res.ok) {
-        const data = await res.json()
-        toast.success('You resigned')
-        // Emit resign via socket
-        if (socket) {
-          socket.emit('resign', {
-            gameId,
-            resignerColor: playerColor,
-            resignerId: currentUserId,
-          })
-          // Also emit game update
-          socket.emit('game-update', {
-            gameId,
-            state: { 
-              status: 'completed',
-              result: data.game?.result || (playerColor === 'w' ? 'black_wins' : 'white_wins')
-            }
-          })
-        }
-      } else {
-        toast.error('Error resigning')
-      }
-    } catch (error) {
-      toast.error('Error resigning')
-    }
-  }
 
-  async function handleOfferDraw() {
-    setIsOfferingDraw(true)
-    try {
-      const res = await fetch(`/api/games/${gameId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'offer-draw' }),
-      })
-      
-      if (res.ok) {
-        const data = await res.json()
-        toast.success('Draw offer sent')
-        // Emit draw offer via socket
-        if (socket) {
-          socket.emit('draw-offer', {
-            gameId,
-            offererColor: playerColor,
-            offererId: currentUserId,
-          })
-          // Also emit game update
-          socket.emit('game-update', {
-            gameId,
-            state: { 
-              status: playerColor === 'w' ? 'draw_offered_white' : 'draw_offered_black',
-              result: data.game?.result || undefined
-            }
-          })
-        }
-        // Update local status
-        if (data.game) {
-          // Status will be updated via socket listener
-        }
+      if (response.ok) {
+        socket?.emit('player-resigned', { gameId, playerId: user?.id })
+        toast.success('You have resigned')
+        setTimeout(() => {
+          window.location.href = '/dashboard'
+        }, 1500)
       } else {
-        toast.error('Error offering draw')
+        toast.error('Failed to resign')
       }
     } catch (error) {
-      toast.error('Error offering draw')
+      console.error('Resign error:', error)
+      toast.error('Failed to resign')
     } finally {
-      setIsOfferingDraw(false)
+      setIsProcessing(false)
     }
   }
 
-  async function handleDrawResponse(accept: boolean) {
-    try {
-      const res = await fetch(`/api/games/${gameId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: accept ? 'accept-draw' : 'decline-draw',
-        }),
-      })
-      
-      if (res.ok) {
-        const data = await res.json()
-        toast.success(accept ? 'Draw accepted' : 'Draw declined')
-        // Emit draw response via socket
-        if (socket) {
-          socket.emit('draw-response', {
-            gameId,
-            accepted: accept,
-            responderColor: playerColor,
-          })
-          // Also emit game update
-          socket.emit('game-update', {
-            gameId,
-            state: { 
-              status: accept ? 'completed' : 'active',
-              result: accept ? 'draw' : undefined
-            }
-          })
-        }
-      } else {
-        toast.error('Error responding to draw offer')
-      }
-    } catch (error) {
-      toast.error('Error responding to draw offer')
-    }
+  if (isSpectator || status !== 'active') {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+        <button
+          onClick={() => window.location.href = '/dashboard'}
+          className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+        >
+          Back to Dashboard
+        </button>
+      </div>
+    )
   }
-
-  async function handleCloseGame() {
-    if (!confirm('Are you sure you want to close this game? This will cancel the game for both players.')) return
-
-    setIsClosing(true)
-    try {
-      const res = await fetch(`/api/games/${gameId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'close-game' }),
-      })
-      
-      if (res.ok) {
-        const data = await res.json()
-        toast.success('Game closed')
-        // Emit game update via socket to notify both players
-        if (socket) {
-          socket.emit('game-update', {
-            gameId,
-            state: { 
-              status: 'completed', 
-              result: 'cancelled',
-              whiteTimeLeft: data.game?.whiteTimeLeft,
-              blackTimeLeft: data.game?.blackTimeLeft,
-            }
-          })
-        }
-        // Don't redirect - let players see the result
-      } else {
-        const data = await res.json()
-        toast.error(data.error || 'Error closing game')
-      }
-    } catch (error) {
-      toast.error('Error closing game')
-    } finally {
-      setIsClosing(false)
-    }
-  }
-
-  const isDrawOffered = status.includes('draw_offered')
-  const drawOfferedByWhite = status === 'draw_offered_white'
-  const drawOfferedByBlack = status === 'draw_offered_black'
-  
-  // Show Accept/Decline only to the player who received the offer
-  const canRespondToDraw = isDrawOffered && (
-    (drawOfferedByWhite && playerColor === 'b') || 
-    (drawOfferedByBlack && playerColor === 'w')
-  )
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Main game controls */}
-      <div className="flex gap-4 justify-center flex-wrap">
-        {canRespondToDraw ? (
-          <>
-            <button
-              onClick={() => handleDrawResponse(true)}
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold transition"
-            >
-              Accept Draw
-            </button>
-            <button
-              onClick={() => handleDrawResponse(false)}
-              className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-semibold transition"
-            >
-              Decline Draw
-            </button>
-          </>
-        ) : !isDrawOffered ? (
-          <>
-            <button
-              onClick={handleOfferDraw}
-              disabled={isOfferingDraw}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold disabled:opacity-50 transition"
-            >
-              Offer Draw
-            </button>
-            <button
-              onClick={handleResign}
-              className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-semibold transition"
-            >
-              Resign
-            </button>
-          </>
-        ) : null}
-      </div>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-3">
+      <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+        Game Controls
+      </h3>
 
-      {/* Close game button - only for game creator on active games */}
-      {isGameCreator && isGameActive && (
-        <div className="flex justify-center">
-          <button
-            onClick={handleCloseGame}
-            disabled={isClosing}
-            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold disabled:opacity-50 transition flex items-center gap-2 text-sm"
-          >
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              className="h-4 w-4" 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M6 18L18 6M6 6l12 12" 
-              />
-            </svg>
-            {isClosing ? 'Closing...' : 'Close Game'}
-          </button>
-        </div>
-      )}
+      <button
+        onClick={handleOfferDraw}
+        disabled={isProcessing || !isMyTurn}
+        className="w-full px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+      >
+        Offer Draw
+      </button>
+
+      <button
+        onClick={handleResign}
+        disabled={isProcessing}
+        className="w-full px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+      >
+        Resign
+      </button>
+
+      {/* FEATURE 7: Go to Dashboard button */}
+      <button
+        onClick={onGoToDashboard}
+        className="w-full px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition"
+      >
+        Go to Dashboard
+      </button>
     </div>
   )
 }

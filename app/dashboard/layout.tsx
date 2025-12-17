@@ -14,8 +14,34 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
-  const { user, isLoading } = useAuthStore()
+  const { user, isLoading, setUser, setLoading } = useAuthStore()
   useSocket()
+
+  // Load user if not already loaded
+  useEffect(() => {
+    const loadUser = async () => {
+      if (!user) {
+        try {
+          setLoading(true)
+          const res = await fetch('/api/auth/me', { credentials: 'include' })
+          const data = await res.json()
+          if (res.ok && data.user) {
+            setUser(data.user)
+          } else {
+            setLoading(false)
+            router.push('/login')
+          }
+        } catch (error) {
+          console.error('Error loading user:', error)
+          setLoading(false)
+          router.push('/login')
+        }
+      } else {
+        setLoading(false)
+      }
+    }
+    loadUser()
+  }, [user, setUser, setLoading, router])
 
   useEffect(() => {
     if (!isLoading && !user) {

@@ -2,6 +2,8 @@ const { createServer } = require('http')
 const { parse } = require('url')
 const next = require('next')
 const { Server } = require('socket.io')
+const { PrismaClient } = require('@prisma/client')
+const prisma = new PrismaClient()
 
 const dev = process.env.NODE_ENV !== 'production'
 const hostname = process.env.HOSTNAME || '0.0.0.0'
@@ -40,10 +42,43 @@ app.prepare().then(() => {
     console.log('New client connected:', socket.id)
 
     // User authentication
-    socket.on('authenticate', (userId) => {
-      connectedUsers.set(socket.id, userId)
-      socket.join(`user:${userId}`)
-      console.log(`User ${userId} authenticated on socket ${socket.id}`)
+    socket.on('authenticate', async (data) => {
+      const userId = typeof data === 'string' ? data : data?.userId
+      if (userId) {
+        connectedUsers.set(socket.id, userId)
+        socket.data.userId = userId
+        socket.join(`user:${userId}`)
+        console.log(`User ${userId} authenticated on socket ${socket.id}`)
+        
+        // Mark user online
+        try {
+          await prisma.user.update({
+            where: { id: userId },
+            data: { isOnline: true }
+          })
+          
+          // Get user's friends and notify them
+          const friendships = await prisma.friendship.findMany({
+            where: {
+              status: 'accepted',
+              OR: [
+                { senderId: userId },
+                { receiverId: userId }
+              ]
+            }
+          })
+          
+          friendships.forEach(friendship => {
+            const friendId = friendship.senderId === userId 
+              ? friendship.receiverId 
+              : friendship.senderId
+            
+            io.to(`user:${friendId}`).emit('user-online', { userId })
+          })
+        } catch (error) {
+          console.error('Authenticate error:', error)
+        }
+      }
     })
 
     // Join game room
@@ -114,6 +149,107 @@ app.prepare().then(() => {
       io.to(`user:${data.senderId}`).emit('message-sent', data)
     })
 
+    // FEATURE 4: In-Game Chat
+    socket.on('game-chat-message', (data) => {
+      const { gameId, message } = data
+      // Emit to all users in the game room
+      io.to(`game:${gameId}`).emit('game-chat-message', {
+        gameId,
+        message
+      })
+    })
+
+    // FEATURE 5: User online status
+    socket.on('user-online', async (data) => {
+      const { userId } = data
+      try {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { isOnline: true }
+        })
+        
+        const friendships = await prisma.friendship.findMany({
+          where: {
+            status: 'accepted',
+            OR: [
+              { senderId: userId },
+              { receiverId: userId }
+            ]
+          }
+        })
+        
+        friendships.forEach(friendship => {
+          const friendId = friendship.senderId === userId 
+            ? friendship.receiverId 
+            : friendship.senderId
+          
+          io.to(`user:${friendId}`).emit('user-online', { userId })
+        })
+      } catch (error) {
+        console.error('User online error:', error)
+      }
+    })
+
+    socket.on('user-offline', async (data) => {
+      const { userId } = data
+      try {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { 
+            isOnline: false,
+            lastSeenAt: new Date()
+          }
+        })
+        
+        const friendships = await prisma.friendship.findMany({
+          where: {
+            status: 'accepted',
+            OR: [
+              { senderId: userId },
+              { receiverId: userId }
+            ]
+          }
+        })
+        
+        friendships.forEach(friendship => {
+          const friendId = friendship.senderId === userId 
+            ? friendship.receiverId 
+            : friendship.senderId
+          
+          io.to(`user:${friendId}`).emit('user-offline', { userId })
+        })
+      } catch (error) {
+        console.error('User offline error:', error)
+      }
+    })
+
+    // FEATURE 7: Game Quit Flow
+    socket.on('game-quit-initiated', (data) => {
+      const { gameId, playerId, timeoutSeconds } = data
+      // Notify opponent
+      io.to(`game:${gameId}`).emit('game-quit-initiated', {
+        gameId,
+        playerId,
+        timeoutSeconds
+      })
+    })
+
+    socket.on('game-quit-returned', (data) => {
+      const { gameId, playerId } = data
+      io.to(`game:${gameId}`).emit('game-quit-returned', {
+        gameId,
+        playerId
+      })
+    })
+
+    socket.on('game-quit-timeout', (data) => {
+      const { gameId, resignedPlayerId } = data
+      io.to(`game:${gameId}`).emit('game-quit-timeout', {
+        gameId,
+        resignedPlayerId
+      })
+    })
+
     // Typing indicator
     socket.on('typing', (data) => {
       io.to(`user:${data.receiverId}`).emit('user-typing', data)
@@ -165,11 +301,42 @@ app.prepare().then(() => {
     })
 
     // Disconnect
-    socket.on('disconnect', () => {
-      const userId = connectedUsers.get(socket.id)
+    socket.on('disconnect', async () => {
+      const userId = connectedUsers.get(socket.id) || socket.data.userId
       if (userId) {
         connectedUsers.delete(socket.id)
         console.log(`User ${userId} disconnected`)
+        
+        try {
+          await prisma.user.update({
+            where: { id: userId },
+            data: { 
+              isOnline: false,
+              lastSeenAt: new Date()
+            }
+          })
+          
+          // Get user's friends and notify them
+          const friendships = await prisma.friendship.findMany({
+            where: {
+              status: 'accepted',
+              OR: [
+                { senderId: userId },
+                { receiverId: userId }
+              ]
+            }
+          })
+          
+          friendships.forEach(friendship => {
+            const friendId = friendship.senderId === userId 
+              ? friendship.receiverId 
+              : friendship.senderId
+            
+            io.to(`user:${friendId}`).emit('user-offline', { userId })
+          })
+        } catch (error) {
+          console.error('Disconnect error:', error)
+        }
       }
       console.log('Client disconnected:', socket.id)
     })

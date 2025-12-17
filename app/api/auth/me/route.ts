@@ -1,33 +1,57 @@
+// app/api/auth/me/route.ts
+// UPDATED VERSION - includes boardTheme, pieceSet, isOnline
+
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { requireAuth } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
-    // Add timeout to prevent hanging
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Request timeout')), 8000)
+    const session = await requireAuth()
+
+    // Get user with all fields (including new ones if Prisma Client is regenerated)
+    const user = await prisma.user.findUnique({
+      where: { id: session.id }
     })
 
-    const sessionPromise = getSession()
-    
-    const session = await Promise.race([sessionPromise, timeoutPromise]) as any
-    
-    if (!session) {
-      return NextResponse.json({ user: null })
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    return NextResponse.json({ user: session })
+    // Return user with new fields (will be undefined if Prisma Client not regenerated yet)
+    return NextResponse.json({ 
+      user: {
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        bio: user.bio,
+        profileImage: user.profileImage,
+        isAdmin: user.isAdmin,
+        isBanned: user.isBanned,
+        isSuspended: user.isSuspended,
+        isOnline: (user as any).isOnline ?? false,
+        lastSeenAt: (user as any).lastSeenAt ?? null,
+        boardTheme: (user as any).boardTheme ?? 'brown',
+        pieceSet: (user as any).pieceSet ?? 'default',
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      }
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    return NextResponse.json({ user })
   } catch (error: any) {
     console.error('Get user error:', error)
     
-    // If it's a timeout or database error, return null user (not logged in)
-    if (error.message === 'Request timeout' || error.message?.includes('database') || error.message?.includes('P1001')) {
-      console.error('Database connection issue - returning null user')
-      return NextResponse.json({ user: null })
+    if (error.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     
     return NextResponse.json(
-      { error: 'An error occurred', user: null },
+      { error: 'Failed to fetch user' },
       { status: 500 }
     )
   }

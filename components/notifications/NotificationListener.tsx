@@ -140,6 +140,11 @@ export default function NotificationListener() {
     setActiveChallenge(null)
   }
 
+  // Don't render anything if socket or user not available
+  if (!socket || !user) {
+    return null
+  }
+
   return (
     <>
       {activeChallenge && (

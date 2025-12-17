@@ -21,6 +21,10 @@ model User {
   isBanned        Boolean   @default(false)
   isSuspended     Boolean   @default(false)
   suspendedUntil  DateTime?
+  isOnline        Boolean   @default(false)
+  lastSeenAt      DateTime?
+  boardTheme      String    @default("brown")
+  pieceSet        String    @default("default")
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -72,12 +76,14 @@ model Game {
   blackPlayerId   String
   fen             String    @default("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
   pgn             String    @default("")
-  status          String    @default("active") // active, draw_offered_white, draw_offered_black, completed, resigned
+  status          String    @default("active") // active, draw_offered_white, draw_offered_black, completed, resigned, cancelled, active_with_quit_timer
   result          String?   // white_wins, black_wins, draw, null if active
   timeControl     Int       @default(600) // seconds per player
   whiteTimeLeft   Int       @default(600)
   blackTimeLeft   Int       @default(600)
   lastMoveAt      DateTime?
+  whitePlayerQuitAt    DateTime?
+  blackPlayerQuitAt    DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   completedAt     DateTime?
@@ -89,6 +95,7 @@ model Game {
   blackPlayer     User      @relation("BlackPlayer", fields: [blackPlayerId], references: [id], onDelete: Cascade)
 
   spectators      Spectator[]
+  messages        Message[]
 
   @@index([whitePlayerId])
   @@index([blackPlayerId])
@@ -112,6 +119,7 @@ model Message {
   id          String   @id @default(cuid())
   senderId    String
   receiverId  String
+  gameId      String?
   content     String
   isRead      Boolean  @default(false)
   isFlagged   Boolean  @default(false) // for bad language detection
@@ -119,9 +127,11 @@ model Message {
 
   sender      User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
   receiver    User     @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  game        Game?    @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
   @@index([senderId])
   @@index([receiverId])
+  @@index([gameId])
   @@index([isFlagged])
   @@index([createdAt])
 }
