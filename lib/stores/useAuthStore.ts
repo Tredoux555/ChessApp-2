@@ -4,6 +4,7 @@ interface User {
   id: string
   username: string
   displayName: string | null
+  bio: string | null
   profileImage: string | null
   isAdmin: boolean
 }
