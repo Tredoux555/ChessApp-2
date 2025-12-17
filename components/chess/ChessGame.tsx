@@ -452,10 +452,11 @@ export default function ChessGame({
   // FEATURE 3: Get board theme colors
   const boardColors = BOARD_THEMES[boardTheme as keyof typeof BOARD_THEMES] || BOARD_THEMES.brown
 
-  // FEATURE 3: Get custom pieces (always use Chess.com pieces if pieceSet is set)
-  const customPieces = pieceSet && pieceSet !== 'default' && PIECE_SETS[pieceSet as keyof typeof PIECE_SETS]
-    ? PIECE_SETS[pieceSet as keyof typeof PIECE_SETS] 
-    : PIECE_SETS.merida // Default to Chess.com merida/neo pieces
+  // FEATURE 3: Get custom pieces (always use Chess.com pieces by default)
+  const effectivePieceSet = pieceSet || 'merida' // Default to merida if not set
+  const customPieces = effectivePieceSet !== 'default' && PIECE_SETS[effectivePieceSet as keyof typeof PIECE_SETS]
+    ? PIECE_SETS[effectivePieceSet as keyof typeof PIECE_SETS] 
+    : PIECE_SETS.merida // Fallback to Chess.com merida/neo pieces
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 p-4">
