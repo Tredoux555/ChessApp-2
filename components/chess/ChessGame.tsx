@@ -454,9 +454,21 @@ export default function ChessGame({
 
   // FEATURE 3: Get custom pieces (always use Chess.com pieces by default)
   const effectivePieceSet = pieceSet || 'merida' // Default to merida if not set
-  const customPieces = effectivePieceSet !== 'default' && PIECE_SETS[effectivePieceSet as keyof typeof PIECE_SETS]
+  const pieceSetData = effectivePieceSet !== 'default' && PIECE_SETS[effectivePieceSet as keyof typeof PIECE_SETS]
     ? PIECE_SETS[effectivePieceSet as keyof typeof PIECE_SETS] 
     : PIECE_SETS.merida // Fallback to Chess.com merida/neo pieces
+
+  // Convert piece URLs to customPieces function format for react-chessboard
+  const customPieces = pieceSetData ? Object.keys(pieceSetData).reduce((acc, piece) => {
+    acc[piece] = ({ squareWidth }: { squareWidth: number }) => (
+      <img
+        src={pieceSetData[piece as keyof typeof pieceSetData]}
+        alt={piece}
+        style={{ width: squareWidth, height: squareWidth }}
+      />
+    )
+    return acc
+  }, {} as any) : undefined
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 p-4">
