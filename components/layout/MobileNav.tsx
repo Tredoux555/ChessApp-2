@@ -19,8 +19,10 @@ export default function MobileNav() {
     navItems.push({ href: '/admin', icon: '⚙️', label: 'Admin' })
   }
 
+  if (!user) return null
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-[9999] shadow-lg">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-[9999] shadow-lg" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999 }}>
       <div className="flex justify-around items-center h-16">
         {navItems.map((item) => {
           const isActive = pathname === item.href
