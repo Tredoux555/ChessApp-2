@@ -1,3 +1,4 @@
+// Auth store for user authentication state
 import { create } from 'zustand'
 
 interface User {

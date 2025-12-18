@@ -1,3 +1,4 @@
+// Socket hook for real-time communication
 'use client'
 
 import { useEffect } from 'react'

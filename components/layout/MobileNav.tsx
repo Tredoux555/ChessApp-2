@@ -1,3 +1,4 @@
+// Mobile bottom navigation bar
 'use client'
 
 import Link from 'next/link'

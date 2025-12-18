@@ -1,3 +1,4 @@
+// Admin dashboard with user and message management
 'use client'
 
 import { useState, useEffect } from 'react'
