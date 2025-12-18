@@ -70,7 +70,7 @@ export default function ProductGrid() {
                 )}
                 <div className="flex justify-between items-center">
                   <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
-                    ${product.price.toFixed(2)}
+                    ¥{product.price.toFixed(2)}
                   </span>
                   <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold">
                     View Details
