@@ -52,12 +52,20 @@ export default function ProductGrid() {
               key={product.id}
               className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden"
             >
-              {product.imageUrl && (
+              {product.imageUrl ? (
                 <img
                   src={product.imageUrl}
                   alt={product.name}
                   className="w-full h-48 object-cover"
+                  onError={(e) => {
+                    // Hide broken image
+                    (e.target as HTMLImageElement).style.display = 'none'
+                  }}
                 />
+              ) : (
+                <div className="w-full h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                  <span className="text-4xl">🛒</span>
+                </div>
               )}
               <div className="p-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
