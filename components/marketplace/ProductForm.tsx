@@ -14,6 +14,7 @@ export default function ProductForm({ onSuccess, onCancel }: ProductFormProps) {
     name: '',
     description: '',
     price: '',
+    quantity: '1',
     imageUrl: '',
   })
 
@@ -28,12 +29,21 @@ export default function ProductForm({ onSuccess, onCancel }: ProductFormProps) {
         return
       }
 
+      const quantity = parseInt(formData.quantity)
+      if (isNaN(quantity) || quantity < 1) {
+        toast.error('Please enter a valid quantity')
+        return
+      }
+
       const res = await fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
+          name: formData.name,
+          description: formData.description,
           price,
+          quantity,
+          imageUrl: formData.imageUrl,
         }),
       })
 
@@ -48,6 +58,7 @@ export default function ProductForm({ onSuccess, onCancel }: ProductFormProps) {
         name: '',
         description: '',
         price: '',
+        quantity: '1',
         imageUrl: '',
       })
       onSuccess?.()
@@ -103,22 +114,41 @@ export default function ProductForm({ onSuccess, onCancel }: ProductFormProps) {
           />
         </div>
 
-        <div>
-          <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Price ($) *
-          </label>
-          <input
-            type="number"
-            id="price"
-            name="price"
-            required
-            min="0"
-            step="0.01"
-            value={formData.price}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-            placeholder="0.00"
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Price ($) *
+            </label>
+            <input
+              type="number"
+              id="price"
+              name="price"
+              required
+              min="0"
+              step="0.01"
+              value={formData.price}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              placeholder="0.00"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Quantity *
+            </label>
+            <input
+              type="number"
+              id="quantity"
+              name="quantity"
+              required
+              min="1"
+              value={formData.quantity}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              placeholder="1"
+            />
+          </div>
         </div>
 
         <div>
