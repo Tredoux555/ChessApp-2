@@ -55,6 +55,11 @@ export default function Header() {
             <Link href="/settings/board" className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium">
               Settings
             </Link>
+            {user?.isAdmin && (
+              <Link href="/admin" className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium">
+                Admin
+              </Link>
+            )}
           </div>
 
           {/* Theme Toggle */}

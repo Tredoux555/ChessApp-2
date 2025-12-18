@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import AdminDashboard from '@/components/admin/AdminDashboard'
 
 export default function AdminPage() {
   const router = useRouter()
@@ -49,9 +50,7 @@ export default function AdminPage() {
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
         Admin Panel
       </h1>
-      <p className="text-gray-600 dark:text-gray-400">
-        Admin dashboard coming soon...
-      </p>
+      <AdminDashboard />
     </div>
   )
 }

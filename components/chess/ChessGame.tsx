@@ -162,6 +162,68 @@ export default function ChessGame({
     }
   }, [user, loadPreferences])
 
+  // TIMER COUNTDOWN - Decrement every second for the active player
+  useEffect(() => {
+    // Only run timer if game is active
+    if (status !== 'active') return
+    
+    const timer = setInterval(() => {
+      if (currentTurn === 'w') {
+        setWhiteTime((prev) => {
+          if (prev <= 1) {
+            // White ran out of time - black wins
+            clearInterval(timer)
+            handleTimeout('white')
+            return 0
+          }
+          return prev - 1
+        })
+      } else {
+        setBlackTime((prev) => {
+          if (prev <= 1) {
+            // Black ran out of time - white wins
+            clearInterval(timer)
+            handleTimeout('black')
+            return 0
+          }
+          return prev - 1
+        })
+      }
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [status, currentTurn])
+
+  // Handle timeout (flag)
+  const handleTimeout = async (loser: 'white' | 'black') => {
+    const winner = loser === 'white' ? 'black_wins' : 'white_wins'
+    setStatus('completed')
+    setResult(winner)
+    
+    // Notify via socket
+    socket?.emit('game-update', {
+      gameId,
+      status: 'completed',
+      result: winner
+    })
+    
+    // Save to database
+    try {
+      await fetch(`/api/games/${gameId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'timeout',
+          data: { result: winner }
+        })
+      })
+    } catch (error) {
+      console.error('Failed to save timeout result:', error)
+    }
+    
+    toast.error(`${loser === 'white' ? 'White' : 'Black'} ran out of time!`)
+  }
+
   // FEATURE 1: Extract last move from PGN when game updates
   useEffect(() => {
     if (pgn) {
@@ -300,11 +362,9 @@ export default function ChessGame({
       // FEATURE 1: Update last move
       setLastMove({ from: sourceSquare, to: targetSquare })
 
-      // Calculate time left (simplified - in production, calculate based on time control)
-      const currentTime = Date.now()
-      const timeElapsed = Math.floor((currentTime - (game.history().length * 1000)) / 1000) // Simplified
-      const newWhiteTime = isPlayerWhite ? whiteTime - timeElapsed : whiteTime
-      const newBlackTime = isPlayerBlack ? blackTime - timeElapsed : blackTime
+      // Use current timer values (already being decremented by the timer useEffect)
+      const currentWhiteTime = whiteTime
+      const currentBlackTime = blackTime
 
       // Emit move via socket FIRST for real-time updates
       socket.emit('move', {
@@ -312,8 +372,8 @@ export default function ChessGame({
         fen: newFen,
         pgn: newPgn,
         move: { from: sourceSquare, to: targetSquare },
-        whiteTimeLeft: newWhiteTime > 0 ? newWhiteTime : 0,
-        blackTimeLeft: newBlackTime > 0 ? newBlackTime : 0,
+        whiteTimeLeft: currentWhiteTime,
+        blackTimeLeft: currentBlackTime,
       })
 
       // Then send move to API for persistence
@@ -325,8 +385,8 @@ export default function ChessGame({
           data: {
             fen: newFen,
             pgn: newPgn,
-            whiteTimeLeft: newWhiteTime > 0 ? newWhiteTime : 0,
-            blackTimeLeft: newBlackTime > 0 ? newBlackTime : 0,
+            whiteTimeLeft: currentWhiteTime,
+            blackTimeLeft: currentBlackTime,
             move: { from: sourceSquare, to: targetSquare }
           }
         })

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/lib/stores/useAuthStore'
 import FriendRequests from '@/components/friends/FriendRequests'
+import UserSearch from '@/components/friends/UserSearch'
 
 interface FriendsListProps {
   onSelectFriend: (id: string, name: string) => void
@@ -12,7 +13,7 @@ export default function FriendsList({ onSelectFriend }: FriendsListProps) {
   const { user } = useAuthStore()
   const [friends, setFriends] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'friends' | 'requests'>('friends')
+  const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'add'>('friends')
 
   useEffect(() => {
     async function fetchFriends() {
@@ -48,7 +49,7 @@ export default function FriendsList({ onSelectFriend }: FriendsListProps) {
       <div className="flex border-b border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setActiveTab('friends')}
-          className={`flex-1 px-4 py-3 text-sm font-semibold transition ${
+          className={`flex-1 px-3 py-3 text-sm font-semibold transition ${
             activeTab === 'friends'
               ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
@@ -58,13 +59,23 @@ export default function FriendsList({ onSelectFriend }: FriendsListProps) {
         </button>
         <button
           onClick={() => setActiveTab('requests')}
-          className={`flex-1 px-4 py-3 text-sm font-semibold transition ${
+          className={`flex-1 px-3 py-3 text-sm font-semibold transition ${
             activeTab === 'requests'
               ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
           }`}
         >
           Requests
+        </button>
+        <button
+          onClick={() => setActiveTab('add')}
+          className={`flex-1 px-3 py-3 text-sm font-semibold transition ${
+            activeTab === 'add'
+              ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+          }`}
+        >
+          + Add
         </button>
       </div>
 
@@ -74,7 +85,7 @@ export default function FriendsList({ onSelectFriend }: FriendsListProps) {
           {friends.length === 0 ? (
             <div className="p-4 text-center text-gray-600 dark:text-gray-400">
               <p>No friends yet</p>
-              <p className="text-sm mt-2">Add friends to start chatting</p>
+              <p className="text-sm mt-2">Click &quot;+ Add&quot; to find friends</p>
             </div>
           ) : (
             friends.map((friend) => {
@@ -103,8 +114,12 @@ export default function FriendsList({ onSelectFriend }: FriendsListProps) {
             })
           )}
         </div>
-      ) : (
+      ) : activeTab === 'requests' ? (
         <FriendRequests />
+      ) : (
+        <div className="p-4">
+          <UserSearch />
+        </div>
       )}
     </div>
   )

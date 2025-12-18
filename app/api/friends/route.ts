@@ -2,12 +2,40 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 
-// GET - Get friends and friend requests
+// GET - Get friends, friend requests, or search users
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth()
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type') || 'friends'
+    const search = searchParams.get('search')
+
+    // Handle user search
+    if (search) {
+      const users = await prisma.user.findMany({
+        where: {
+          AND: [
+            {
+              OR: [
+                { username: { contains: search, mode: 'insensitive' } },
+                { displayName: { contains: search, mode: 'insensitive' } },
+              ],
+            },
+            { isBanned: false },
+            { id: { not: session.id } }, // Exclude current user
+          ],
+        },
+        select: {
+          id: true,
+          username: true,
+          displayName: true,
+          profileImage: true,
+        },
+        take: 20, // Limit results
+      })
+
+      return NextResponse.json({ users })
+    }
 
     if (type === 'requests') {
       // Get pending friend requests

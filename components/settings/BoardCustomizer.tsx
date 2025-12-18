@@ -15,12 +15,31 @@ const BOARD_THEMES = [
 ]
 
 const PIECE_SETS = [
-  { id: 'default', name: 'Default' },
-  { id: 'merida', name: 'Merida' },
-  { id: 'alpha', name: 'Alpha' },
-  { id: 'tatiana', name: 'Tatiana' },
-  { id: 'leipzig', name: 'Leipzig' }
+  { id: 'default', name: 'Default', urlPrefix: 'neo' },
+  { id: 'merida', name: 'Merida', urlPrefix: 'neo' },
+  { id: 'alpha', name: 'Alpha', urlPrefix: 'alpha' },
+  { id: 'tatiana', name: 'Tatiana', urlPrefix: 'tatiana' },
+  { id: 'leipzig', name: 'Leipzig', urlPrefix: 'leipzig' }
 ]
+
+// Helper function to get piece image URL
+function getPieceUrl(setId: string, piece: string): string {
+  const set = PIECE_SETS.find(s => s.id === setId)
+  const prefix = set?.urlPrefix || 'neo'
+  return `https://images.chesscomfiles.com/chess-themes/pieces/${prefix}/150/${piece}.png`
+}
+
+// Initial piece positions for the preview board
+const INITIAL_PIECES: { [key: number]: string } = {
+  // Black pieces (row 0)
+  0: 'br', 1: 'bn', 2: 'bb', 3: 'bq', 4: 'bk', 5: 'bb', 6: 'bn', 7: 'br',
+  // Black pawns (row 1)
+  8: 'bp', 9: 'bp', 10: 'bp', 11: 'bp', 12: 'bp', 13: 'bp', 14: 'bp', 15: 'bp',
+  // White pawns (row 6)
+  48: 'wp', 49: 'wp', 50: 'wp', 51: 'wp', 52: 'wp', 53: 'wp', 54: 'wp', 55: 'wp',
+  // White pieces (row 7)
+  56: 'wr', 57: 'wn', 58: 'wb', 59: 'wq', 60: 'wk', 61: 'wb', 62: 'wn', 63: 'wr',
+}
 
 export default function BoardCustomizer() {
   const { boardTheme, pieceSet, setBoardTheme, setPieceSet, savePreferences } = useBoardStore()
@@ -94,11 +113,30 @@ export default function BoardCustomizer() {
                   : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
               }`}
             >
+              <div className="flex justify-center gap-1 mb-2">
+                <img 
+                  src={getPieceUrl(set.id, 'wk')} 
+                  alt="White King" 
+                  className="w-10 h-10"
+                />
+                <img 
+                  src={getPieceUrl(set.id, 'wq')} 
+                  alt="White Queen" 
+                  className="w-10 h-10"
+                />
+                <img 
+                  src={getPieceUrl(set.id, 'bk')} 
+                  alt="Black King" 
+                  className="w-10 h-10"
+                />
+                <img 
+                  src={getPieceUrl(set.id, 'bq')} 
+                  alt="Black Queen" 
+                  className="w-10 h-10"
+                />
+              </div>
               <p className="text-sm font-medium text-gray-900 dark:text-white">
                 {set.name}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                {set.id === 'default' ? 'Classic pieces' : `${set.name} style`}
               </p>
             </button>
           ))}
@@ -111,20 +149,29 @@ export default function BoardCustomizer() {
           Preview
         </h3>
         <div className="flex justify-center">
-          <div className="grid grid-cols-8 w-64 h-64 border-2 border-gray-300 dark:border-gray-600 rounded">
+          <div className="grid grid-cols-8 w-80 h-80 border-2 border-gray-300 dark:border-gray-600 rounded overflow-hidden">
             {Array.from({ length: 64 }).map((_, i) => {
               const row = Math.floor(i / 8)
               const col = i % 8
               const isLight = (row + col) % 2 === 0
               const theme = BOARD_THEMES.find(t => t.id === boardTheme)
               const bgColor = isLight ? theme?.light : theme?.dark
+              const piece = INITIAL_PIECES[i]
               
               return (
                 <div
                   key={i}
-                  className="w-8 h-8"
+                  className="w-10 h-10 flex items-center justify-center"
                   style={{ backgroundColor: bgColor }}
-                />
+                >
+                  {piece && (
+                    <img 
+                      src={getPieceUrl(pieceSet, piece)} 
+                      alt={piece}
+                      className="w-9 h-9"
+                    />
+                  )}
+                </div>
               )
             })}
           </div>
