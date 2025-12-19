@@ -63,7 +63,7 @@ export default function GameControls({
       })
 
       if (response.ok) {
-        socket?.emit('player-resigned', { gameId, playerId: user?.id })
+        socket?.emit('resign', { gameId, playerId: user?.id })
         toast.success('You have resigned')
         setTimeout(() => {
           window.location.href = '/dashboard'

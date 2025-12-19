@@ -37,6 +37,29 @@ app.prepare().then(() => {
   // Store active games and their timers
   const activeGames = new Map()
   const connectedUsers = new Map() // socketId -> userId
+  
+  // Periodic timer sync (every 5 seconds)
+  setInterval(async () => {
+    try {
+      const activeGameIds = Array.from(activeGames.keys())
+      for (const gameId of activeGameIds) {
+        const game = await prisma.game.findUnique({
+          where: { id: gameId },
+          select: { whiteTimeLeft: true, blackTimeLeft: true, status: true }
+        })
+        
+        if (game && game.status === 'active') {
+          io.to(`game:${gameId}`).emit('timer-sync', {
+            gameId,
+            whiteTimeLeft: game.whiteTimeLeft,
+            blackTimeLeft: game.blackTimeLeft
+          })
+        }
+      }
+    } catch (error) {
+      console.error('Timer sync error:', error)
+    }
+  }, 5000)
 
   io.on('connection', (socket) => {
     console.log('New client connected:', socket.id)
@@ -139,14 +162,31 @@ app.prepare().then(() => {
     // Resign
     socket.on('resign', (data) => {
       io.to(`game:${data.gameId}`).emit('player-resigned', data)
+      // Also emit game-updated to sync state
+      io.to(`game:${data.gameId}`).emit('game-updated', {
+        gameId: data.gameId,
+        status: 'completed',
+        result: data.winner
+      })
     })
 
     // Chat message
     socket.on('chat-message', (data) => {
+      const userId = connectedUsers.get(socket.id)
+      if (!userId) return
+      
+      const messageData = {
+        ...data,
+        senderId: userId,
+        receiverId: data.receiverId,
+        content: data.content,
+        createdAt: new Date().toISOString()
+      }
+      
       // Send to receiver
-      io.to(`user:${data.receiverId}`).emit('new-message', data)
+      io.to(`user:${data.receiverId}`).emit('new-message', messageData)
       // Send back to sender for confirmation
-      io.to(`user:${data.senderId}`).emit('message-sent', data)
+      socket.emit('message-sent', messageData)
     })
 
     // FEATURE 4: In-Game Chat

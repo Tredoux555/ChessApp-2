@@ -1,7 +1,7 @@
 // components/profile/ProfileEditor.tsx
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useAuthStore } from '@/lib/stores/useAuthStore'
 import toast from 'react-hot-toast'
 
@@ -53,7 +53,10 @@ export default function ProfileEditor() {
   }
 
   const handleUploadImage = async () => {
-    if (!imageFile) return
+    if (!imageFile) {
+      toast.error('Please select an image first')
+      return
+    }
 
     setIsUploading(true)
     try {
@@ -62,22 +65,26 @@ export default function ProfileEditor() {
 
       const response = await fetch('/api/profile/picture', {
         method: 'PUT',
-        body: formData
+        body: formData,
+        credentials: 'include'
       })
 
+      const data = await response.json()
+
       if (response.ok) {
-        const data = await response.json()
         setProfileImage(data.user.profileImage)
         setImageFile(null)
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
         await loadUser()
         toast.success('Profile picture updated!')
       } else {
-        const error = await response.json()
-        toast.error(error.error || 'Failed to upload image')
+        toast.error(data.error || 'Failed to upload image')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload error:', error)
-      toast.error('Failed to upload image')
+      toast.error(error.message || 'Failed to upload image')
     } finally {
       setIsUploading(false)
     }

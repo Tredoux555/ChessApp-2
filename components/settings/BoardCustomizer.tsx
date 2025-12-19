@@ -118,21 +118,33 @@ export default function BoardCustomizer() {
                   src={getPieceUrl(set.id, 'wk')} 
                   alt="White King" 
                   className="w-10 h-10"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none'
+                  }}
                 />
                 <img 
                   src={getPieceUrl(set.id, 'wq')} 
                   alt="White Queen" 
                   className="w-10 h-10"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none'
+                  }}
                 />
                 <img 
                   src={getPieceUrl(set.id, 'bk')} 
                   alt="Black King" 
                   className="w-10 h-10"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none'
+                  }}
                 />
                 <img 
                   src={getPieceUrl(set.id, 'bq')} 
                   alt="Black Queen" 
                   className="w-10 h-10"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none'
+                  }}
                 />
               </div>
               <p className="text-sm font-medium text-gray-900 dark:text-white">

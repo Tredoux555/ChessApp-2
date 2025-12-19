@@ -281,6 +281,17 @@ export default function ChessGame({
           setGame(newGame)
           setFen(data.fen)
         }
+        // Sync timer when game updates
+        if (data.whiteTimeLeft !== undefined) setWhiteTime(data.whiteTimeLeft)
+        if (data.blackTimeLeft !== undefined) setBlackTime(data.blackTimeLeft)
+      }
+    })
+
+    // Timer sync - listen for periodic timer updates
+    socket.on('timer-sync', (data: any) => {
+      if (data.gameId === gameId) {
+        if (data.whiteTimeLeft !== undefined) setWhiteTime(data.whiteTimeLeft)
+        if (data.blackTimeLeft !== undefined) setBlackTime(data.blackTimeLeft)
       }
     })
 

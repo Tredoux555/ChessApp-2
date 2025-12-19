@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useAuthStore } from '@/lib/stores/useAuthStore'
 import { useSocketStore } from '@/lib/stores/useSocketStore'
+import toast from 'react-hot-toast'
 
 interface ChatInterfaceProps {
   friendId: string
@@ -38,16 +39,28 @@ export default function ChatInterface({ friendId, friendName }: ChatInterfacePro
   }, [friendId, user])
 
   useEffect(() => {
-    if (socket) {
-      socket.on('new-message', (message: any) => {
-        if (message.senderId === friendId || message.receiverId === friendId) {
-          setMessages((prev) => [...prev, message])
-        }
-      })
+    if (!socket) {
+      console.warn('Socket not connected, messages may not sync in real-time')
+      return
+    }
 
-      return () => {
-        socket.off('new-message')
+    const handleNewMessage = (message: any) => {
+      if (message.senderId === friendId || message.receiverId === friendId) {
+        setMessages((prev) => {
+          // Check if message already exists to avoid duplicates
+          const exists = prev.some(m => m.id === message.id || (m.content === message.content && m.senderId === message.senderId && Math.abs(new Date(m.createdAt).getTime() - new Date(message.createdAt).getTime()) < 1000))
+          if (exists) return prev
+          return [...prev, message]
+        })
       }
+    }
+
+    socket.on('new-message', handleNewMessage)
+    socket.on('message-sent', handleNewMessage) // Also listen for sent messages
+
+    return () => {
+      socket.off('new-message', handleNewMessage)
+      socket.off('message-sent', handleNewMessage)
     }
   }, [socket, friendId])
 
@@ -59,29 +72,45 @@ export default function ChatInterface({ friendId, friendName }: ChatInterfacePro
     e.preventDefault()
     if (!newMessage.trim() || !user) return
 
+    const messageContent = newMessage.trim()
+    setNewMessage('')
+
     try {
       const res = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           receiverId: friendId,
-          content: newMessage,
+          content: messageContent,
         }),
       })
 
       const data = await res.json()
       if (res.ok) {
-        setMessages((prev) => [...prev, data.message])
-        setNewMessage('')
+        // Add message to local state immediately
+        const newMsg = {
+          ...data.message,
+          senderId: user.id,
+          receiverId: friendId,
+          content: messageContent,
+        }
+        setMessages((prev) => [...prev, newMsg])
+        
+        // Emit socket event for real-time delivery
         if (socket) {
           socket.emit('chat-message', {
             receiverId: friendId,
-            content: newMessage,
+            content: messageContent,
           })
         }
+      } else {
+        toast.error(data.error || 'Failed to send message')
+        setNewMessage(messageContent) // Restore message on error
       }
     } catch (error) {
       console.error('Error sending message:', error)
+      toast.error('Failed to send message')
+      setNewMessage(messageContent) // Restore message on error
     }
   }
 
