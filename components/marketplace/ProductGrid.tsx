@@ -53,17 +53,19 @@ export default function ProductGrid() {
               className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden"
             >
               {product.imageUrl ? (
-                <img
-                  src={product.imageUrl}
-                  alt={product.name}
-                  className="w-full h-48 object-cover"
-                  onError={(e) => {
-                    // Hide broken image
-                    (e.target as HTMLImageElement).style.display = 'none'
-                  }}
-                />
+                <div className="w-full h-64 bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+                  <img
+                    src={product.imageUrl}
+                    alt={product.name}
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      // Hide broken image
+                      (e.target as HTMLImageElement).style.display = 'none'
+                    }}
+                  />
+                </div>
               ) : (
-                <div className="w-full h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                <div className="w-full h-64 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
                   <span className="text-4xl">🛒</span>
                 </div>
               )}
