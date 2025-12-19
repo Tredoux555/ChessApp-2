@@ -79,10 +79,10 @@ export default function Header() {
               <img
                 src={user.profileImage}
                 alt={user.username}
-                className="w-10 h-10 rounded-full"
+                className="w-10 h-10 rounded-lg object-contain border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+              <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold">
                 {user?.username.charAt(0).toUpperCase()}
               </div>
             )}

@@ -84,10 +84,10 @@ export default function FriendsListOnline() {
                     <img
                       src={friend.profileImage}
                       alt={friend.username}
-                      className="w-10 h-10 rounded-full object-cover"
+                      className="w-10 h-10 rounded-lg object-contain border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-white font-semibold">
+                    <div className="w-10 h-10 rounded-lg bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-white font-semibold">
                       {friend.username[0].toUpperCase()}
                     </div>
                   )}
@@ -133,10 +133,10 @@ export default function FriendsListOnline() {
                     <img
                       src={friend.profileImage}
                       alt={friend.username}
-                      className="w-10 h-10 rounded-full object-cover"
+                      className="w-10 h-10 rounded-lg object-contain border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-white font-semibold">
+                    <div className="w-10 h-10 rounded-lg bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-white font-semibold">
                       {friend.username[0].toUpperCase()}
                     </div>
                   )}

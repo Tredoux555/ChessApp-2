@@ -153,15 +153,15 @@ export default function ProfileEditor() {
           Profile Picture
         </label>
         <div className="flex items-center gap-4">
-          <div className="relative w-24 h-24 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
+          <div className="relative w-32 h-32 rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600">
             {profileImage ? (
               <img
                 src={profileImage}
                 alt="Profile"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400 text-3xl">
+              <div className="w-full h-full flex items-center justify-center text-gray-400 text-4xl">
                 {user?.username?.[0]?.toUpperCase() || '?'}
               </div>
             )}

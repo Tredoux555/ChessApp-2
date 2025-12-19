@@ -283,9 +283,9 @@ export default function AdminDashboard() {
                         <td className="py-3 px-2">
                           <div className="flex items-center gap-2">
                             {u.profileImage ? (
-                              <img src={u.profileImage} alt="" className="w-8 h-8 rounded-full" />
+                              <img src={u.profileImage} alt="" className="w-8 h-8 rounded-lg object-contain border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
                             ) : (
-                              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm">
+                              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white text-sm">
                                 {u.username.charAt(0).toUpperCase()}
                               </div>
                             )}
