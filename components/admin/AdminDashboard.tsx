@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react'
 import { useAuthStore } from '@/lib/stores/useAuthStore'
 import ProductForm from '@/components/marketplace/ProductForm'
+import EditProductForm from './EditProductForm'
 import toast from 'react-hot-toast'
 
 interface User {
@@ -37,13 +38,26 @@ interface Message {
   }
 }
 
+interface Product {
+  id: string
+  name: string
+  description: string | null
+  price: number
+  quantity: number
+  imageUrl: string | null
+  isActive: boolean
+  createdAt: string
+}
+
 export default function AdminDashboard() {
   const { user } = useAuthStore()
   const [activeTab, setActiveTab] = useState<'users' | 'messages' | 'products'>('users')
   const [users, setUsers] = useState<User[]>([])
   const [messages, setMessages] = useState<Message[]>([])
+  const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
   const [showFlaggedOnly, setShowFlaggedOnly] = useState(true)
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
 
   // Load users
   const loadUsers = async () => {
@@ -81,12 +95,32 @@ export default function AdminDashboard() {
     }
   }
 
+  // Load products
+  const loadProducts = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/products')
+      const data = await res.json()
+      if (res.ok) {
+        setProducts(data.products || [])
+      } else {
+        toast.error(data.error || 'Failed to load products')
+      }
+    } catch (error) {
+      toast.error('Failed to load products')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Load data when tab changes
   useEffect(() => {
     if (activeTab === 'users') {
       loadUsers()
     } else if (activeTab === 'messages') {
       loadMessages()
+    } else if (activeTab === 'products') {
+      loadProducts()
     }
   }, [activeTab, showFlaggedOnly])
 
@@ -126,6 +160,38 @@ export default function AdminDashboard() {
         loadMessages()
       } else {
         toast.error(data.error || 'Action failed')
+      }
+    } catch (error) {
+      toast.error('Action failed')
+    }
+  }
+
+  // Product actions
+  const handleProductAction = async (productId: string, action: string, data?: any) => {
+    try {
+      if (action === 'delete') {
+        const res = await fetch(`/api/products?id=${productId}`, { method: 'DELETE' })
+        const result = await res.json()
+        if (res.ok) {
+          toast.success('Product deleted')
+          loadProducts()
+        } else {
+          toast.error(result.error || 'Failed to delete')
+        }
+      } else if (action === 'update') {
+        const res = await fetch('/api/products', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: productId, ...data })
+        })
+        const result = await res.json()
+        if (res.ok) {
+          toast.success('Product updated')
+          setEditingProduct(null)
+          loadProducts()
+        } else {
+          toast.error(result.error || 'Failed to update')
+        }
       }
     } catch (error) {
       toast.error('Action failed')
@@ -173,7 +239,7 @@ export default function AdminDashboard() {
                 : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
             }`}
           >
-            Products
+            Products ({products.length})
           </button>
         </nav>
       </div>
@@ -380,10 +446,86 @@ export default function AdminDashboard() {
         {/* PRODUCTS TAB */}
         {activeTab === 'products' && (
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              Product Management
-            </h2>
-            <ProductForm onSuccess={() => toast.success('Product added!')} />
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Product Management
+              </h2>
+              <button
+                onClick={loadProducts}
+                className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-600"
+              >
+                🔄 Refresh
+              </button>
+            </div>
+
+            {editingProduct ? (
+              <EditProductForm
+                product={editingProduct}
+                onSave={(data) => handleProductAction(editingProduct.id, 'update', data)}
+                onCancel={() => setEditingProduct(null)}
+              />
+            ) : (
+              <>
+                <div className="mb-6">
+                  <ProductForm onSuccess={() => { toast.success('Product added!'); loadProducts(); }} />
+                </div>
+
+                {loading ? (
+                  <div className="text-center py-8">
+                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                  </div>
+                ) : products.length === 0 ? (
+                  <p className="text-center text-gray-500 py-8">No products found</p>
+                ) : (
+                  <div className="space-y-4">
+                    {products.map((product) => (
+                      <div key={product.id} className="border dark:border-gray-700 rounded-lg p-4">
+                        <div className="flex gap-4">
+                          {product.imageUrl ? (
+                            <img src={product.imageUrl} alt={product.name} className="w-24 h-24 object-cover rounded" />
+                          ) : (
+                            <div className="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center">
+                              <span className="text-2xl">🛒</span>
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900 dark:text-white">{product.name}</h3>
+                            {product.description && (
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{product.description}</p>
+                            )}
+                            <div className="mt-2 flex gap-4 text-sm">
+                              <span className="text-gray-600 dark:text-gray-400">Price: <strong className="text-gray-900 dark:text-white">¥{product.price.toFixed(2)}</strong></span>
+                              <span className="text-gray-600 dark:text-gray-400">Qty: <strong className="text-gray-900 dark:text-white">{product.quantity}</strong></span>
+                              <span className={`px-2 py-1 rounded text-xs ${product.isActive ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'}`}>
+                                {product.isActive ? 'Active' : 'Inactive'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setEditingProduct(product)}
+                              className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                            >
+                              ✏️ Edit
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm(`Delete "${product.name}"?`)) {
+                                  handleProductAction(product.id, 'delete')
+                                }
+                              }}
+                              className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+                            >
+                              🗑 Delete
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
       </div>
