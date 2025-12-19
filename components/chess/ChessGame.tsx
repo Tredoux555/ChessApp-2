@@ -86,34 +86,32 @@ const PIECE_SETS = {
     bK: 'https://images.chesscomfiles.com/chess-themes/pieces/alpha/150/bk.png'
   },
   tatiana: {
-    // Use merida pieces as Tatiana (Tatiana set may not be available)
-    wP: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wp.png',
-    wN: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wn.png',
-    wB: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wb.png',
-    wR: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wr.png',
-    wQ: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wq.png',
-    wK: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wk.png',
-    bP: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bp.png',
-    bN: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bn.png',
-    bB: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bb.png',
-    bR: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/br.png',
-    bQ: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bq.png',
-    bK: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bk.png'
+    wP: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/wp.png',
+    wN: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/wn.png',
+    wB: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/wb.png',
+    wR: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/wr.png',
+    wQ: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/wq.png',
+    wK: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/wk.png',
+    bP: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/bp.png',
+    bN: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/bn.png',
+    bB: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/bb.png',
+    bR: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/br.png',
+    bQ: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/bq.png',
+    bK: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/bk.png'
   },
   leipzig: {
-    // Use merida pieces as Leipzig (Leipzig set may not be available)
-    wP: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wp.png',
-    wN: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wn.png',
-    wB: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wb.png',
-    wR: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wr.png',
-    wQ: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wq.png',
-    wK: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wk.png',
-    bP: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bp.png',
-    bN: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bn.png',
-    bB: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bb.png',
-    bR: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/br.png',
-    bQ: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bq.png',
-    bK: 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bk.png'
+    wP: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/wp.png',
+    wN: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/wn.png',
+    wB: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/wb.png',
+    wR: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/wr.png',
+    wQ: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/wq.png',
+    wK: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/wk.png',
+    bP: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/bp.png',
+    bN: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/bn.png',
+    bB: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/bb.png',
+    bR: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/br.png',
+    bQ: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/bq.png',
+    bK: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/bk.png'
   }
 }
 
@@ -532,27 +530,18 @@ export default function ChessGame({
     : PIECE_SETS.merida // Fallback to Chess.com merida/neo pieces
 
   // Convert piece URLs to customPieces function format for react-chessboard
-  // Use merida as fallback if piece set images fail
-  const fallbackPieceSet = PIECE_SETS.merida
   const customPieces = pieceSetData ? Object.keys(pieceSetData).reduce((acc, piece) => {
-    acc[piece] = ({ squareWidth }: { squareWidth: number }) => {
-      const primaryUrl = pieceSetData[piece as keyof typeof pieceSetData]
-      const fallbackUrl = fallbackPieceSet[piece as keyof typeof fallbackPieceSet]
-      
-      return (
-        <img
-          src={primaryUrl}
-          alt={piece}
-          style={{ width: squareWidth, height: squareWidth }}
-          onError={(e) => {
-            // Fallback to merida pieces if image fails to load
-            if (fallbackUrl && (e.target as HTMLImageElement).src !== fallbackUrl) {
-              (e.target as HTMLImageElement).src = fallbackUrl
-            }
-          }}
-        />
-      )
-    }
+    acc[piece] = ({ squareWidth }: { squareWidth: number }) => (
+      <img
+        src={pieceSetData[piece as keyof typeof pieceSetData]}
+        alt={piece}
+        style={{ width: squareWidth, height: squareWidth }}
+        onError={(e) => {
+          // If image fails, try to load from a working set as last resort
+          console.warn(`Failed to load piece image: ${pieceSetData[piece as keyof typeof pieceSetData]}`)
+        }}
+      />
+    )
     return acc
   }, {} as any) : undefined
 
