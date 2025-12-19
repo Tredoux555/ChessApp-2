@@ -18,8 +18,8 @@ const PIECE_SETS = [
   { id: 'default', name: 'Default', urlPrefix: 'neo' },
   { id: 'merida', name: 'Merida', urlPrefix: 'neo' },
   { id: 'alpha', name: 'Alpha', urlPrefix: 'alpha' },
-  { id: 'tatiana', name: 'Tatiana', urlPrefix: 'tatiana' },
-  { id: 'leipzig', name: 'Leipzig', urlPrefix: 'leipzig' }
+  { id: 'neo_wood', name: 'Wood', urlPrefix: 'neo_wood' },
+  { id: 'neo_plastic', name: 'Plastic', urlPrefix: 'neo_plastic' }
 ]
 
 // Helper function to get piece image URL

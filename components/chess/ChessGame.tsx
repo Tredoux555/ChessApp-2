@@ -85,33 +85,33 @@ const PIECE_SETS = {
     bQ: 'https://images.chesscomfiles.com/chess-themes/pieces/alpha/150/bq.png',
     bK: 'https://images.chesscomfiles.com/chess-themes/pieces/alpha/150/bk.png'
   },
-  tatiana: {
-    wP: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/wp.png',
-    wN: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/wn.png',
-    wB: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/wb.png',
-    wR: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/wr.png',
-    wQ: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/wq.png',
-    wK: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/wk.png',
-    bP: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/bp.png',
-    bN: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/bn.png',
-    bB: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/bb.png',
-    bR: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/br.png',
-    bQ: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/bq.png',
-    bK: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/bk.png'
+  neo_wood: {
+    wP: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/wp.png',
+    wN: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/wn.png',
+    wB: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/wb.png',
+    wR: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/wr.png',
+    wQ: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/wq.png',
+    wK: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/wk.png',
+    bP: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/bp.png',
+    bN: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/bn.png',
+    bB: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/bb.png',
+    bR: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/br.png',
+    bQ: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/bq.png',
+    bK: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/bk.png'
   },
-  leipzig: {
-    wP: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/wp.png',
-    wN: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/wn.png',
-    wB: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/wb.png',
-    wR: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/wr.png',
-    wQ: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/wq.png',
-    wK: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/wk.png',
-    bP: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/bp.png',
-    bN: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/bn.png',
-    bB: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/bb.png',
-    bR: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/br.png',
-    bQ: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/bq.png',
-    bK: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/bk.png'
+  neo_plastic: {
+    wP: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/wp.png',
+    wN: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/wn.png',
+    wB: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/wb.png',
+    wR: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/wr.png',
+    wQ: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/wq.png',
+    wK: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/wk.png',
+    bP: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/bp.png',
+    bN: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/bn.png',
+    bB: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/bb.png',
+    bR: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/br.png',
+    bQ: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/bq.png',
+    bK: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/bk.png'
   }
 }
 
