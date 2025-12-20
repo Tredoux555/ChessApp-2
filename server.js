@@ -43,17 +43,26 @@ app.prepare().then(() => {
     try {
       const activeGameIds = Array.from(activeGames.keys())
       for (const gameId of activeGameIds) {
-        const game = await prisma.game.findUnique({
-          where: { id: gameId },
-          select: { whiteTimeLeft: true, blackTimeLeft: true, status: true }
-        })
-        
-        if (game && game.status === 'active') {
-          io.to(`game:${gameId}`).emit('timer-sync', {
-            gameId,
-            whiteTimeLeft: game.whiteTimeLeft,
-            blackTimeLeft: game.blackTimeLeft
+        try {
+          const game = await prisma.game.findUnique({
+            where: { id: gameId },
+            select: { whiteTimeLeft: true, blackTimeLeft: true, status: true }
           })
+          
+          if (game && game.status === 'active') {
+            io.to(`game:${gameId}`).emit('timer-sync', {
+              gameId,
+              whiteTimeLeft: game.whiteTimeLeft,
+              blackTimeLeft: game.blackTimeLeft
+            })
+          } else if (!game) {
+            // Game was deleted, remove from activeGames
+            activeGames.delete(gameId)
+          }
+        } catch (gameError) {
+          console.error(`Timer sync error for game ${gameId}:`, gameError)
+          // Remove problematic game from activeGames
+          activeGames.delete(gameId)
         }
       }
     } catch (error) {
@@ -68,6 +77,30 @@ app.prepare().then(() => {
     socket.on('authenticate', async (data) => {
       const userId = typeof data === 'string' ? data : data?.userId
       if (userId) {
+        // Verify user exists and is not banned/suspended
+        try {
+          const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, isBanned: true, isSuspended: true }
+          })
+          
+          if (!user || user.isBanned) {
+            console.warn(`Invalid or banned user attempted socket auth: ${userId}`)
+            socket.disconnect()
+            return
+          }
+          
+          if (user.isSuspended) {
+            console.warn(`Suspended user attempted socket auth: ${userId}`)
+            socket.disconnect()
+            return
+          }
+        } catch (error) {
+          console.error('Socket auth verification error:', error)
+          socket.disconnect()
+          return
+        }
+        
         connectedUsers.set(socket.id, userId)
         socket.data.userId = userId
         socket.join(`user:${userId}`)

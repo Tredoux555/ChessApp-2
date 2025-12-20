@@ -37,12 +37,6 @@ export async function GET(request: NextRequest) {
         updatedAt: user.updatedAt
       }
     })
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    return NextResponse.json({ user })
   } catch (error: any) {
     console.error('Get user error:', error)
     

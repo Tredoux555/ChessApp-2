@@ -198,14 +198,13 @@ export default function ChessGame({
     if (status !== 'active') return
     
     const timer = setInterval(() => {
-      // Read current turn from game state to avoid stale closure
+      // Use functional update to read current game state
       setGame((prevGame) => {
-        const turn = prevGame.turn()
+        const currentTurn = prevGame.turn()
         
-        if (turn === 'w') {
+        if (currentTurn === 'w') {
           setWhiteTime((prev) => {
             if (prev <= 1) {
-              // White ran out of time - black wins
               clearInterval(timer)
               handleTimeout('white')
               return 0
@@ -215,7 +214,6 @@ export default function ChessGame({
         } else {
           setBlackTime((prev) => {
             if (prev <= 1) {
-              // Black ran out of time - white wins
               clearInterval(timer)
               handleTimeout('black')
               return 0
@@ -372,17 +370,15 @@ export default function ChessGame({
     }
 
     try {
-      const move = game.move({
+      // Create new game instance BEFORE making the move to avoid mutation issues
+      const newGame = new Chess(game.fen())
+      const move = newGame.move({
         from: sourceSquare,
         to: targetSquare,
         promotion: 'q' // Always promote to queen for simplicity
       })
 
       if (move === null) return false
-
-      // Create new game instance with updated state (Chess.js mutates, so we need new instance)
-      const newGame = new Chess(game.fen())
-      newGame.move({ from: sourceSquare, to: targetSquare, promotion: 'q' })
       
       const newFen = newGame.fen()
       const newPgn = newGame.pgn()
