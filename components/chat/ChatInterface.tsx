@@ -49,14 +49,24 @@ export default function ChatInterface({ friendId, friendName }: ChatInterfacePro
       if (message.senderId === friendId || message.receiverId === friendId) {
         setMessages((prev) => {
           // Check if message already exists to avoid duplicates
-          const exists = prev.some(m => 
-            m.id === message.id || 
-            (m.content === message.content && 
-             m.senderId === message.senderId && 
-             Math.abs(new Date(m.createdAt).getTime() - new Date(message.createdAt).getTime()) < 1000) ||
+          // Check by ID first (most reliable), then by tempId
+          const existingIndex = prev.findIndex(m => 
+            (m.id && message.id && m.id === message.id) ||
             (m.tempId && message.tempId && m.tempId === message.tempId)
           )
-          if (exists) return prev
+          
+          if (existingIndex !== -1) {
+            // Message exists - update it if it has new data (e.g., tempId -> real ID)
+            const existing = prev[existingIndex]
+            if (message.id && !existing.id) {
+              // Update temp message with real ID
+              const updated = [...prev]
+              updated[existingIndex] = { ...message, tempId: existing.tempId }
+              return updated
+            }
+            // Already exists with same ID, don't add duplicate
+            return prev
+          }
           
           // Remove from pending if it was a pending message
           if (message.tempId) {
@@ -67,6 +77,7 @@ export default function ChatInterface({ friendId, friendName }: ChatInterfacePro
             })
           }
           
+          // New message - add it
           return [...prev, message]
         })
       }
@@ -132,11 +143,14 @@ export default function ChatInterface({ friendId, friendName }: ChatInterfacePro
           return newSet
         })
         
-        // Emit socket event for real-time delivery
+        // Emit socket event for real-time delivery with full message data
         if (socket) {
           socket.emit('chat-message', {
             receiverId: friendId,
             content: messageContent,
+            messageId: data.message.id,
+            senderId: user.id,
+            createdAt: data.message.createdAt
           })
         }
       } else {

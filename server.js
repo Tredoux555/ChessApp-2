@@ -209,16 +209,17 @@ app.prepare().then(() => {
       if (!userId) return
       
       const messageData = {
-        ...data,
+        id: data.messageId || null, // Include message ID if available
         senderId: userId,
         receiverId: data.receiverId,
         content: data.content,
-        createdAt: new Date().toISOString()
+        createdAt: data.createdAt || new Date().toISOString(),
+        tempId: data.tempId || null
       }
       
       // Send to receiver
       io.to(`user:${data.receiverId}`).emit('new-message', messageData)
-      // Send back to sender for confirmation
+      // Send back to sender for confirmation (only if not already in their list)
       socket.emit('message-sent', messageData)
     })
 
