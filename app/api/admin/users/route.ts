@@ -112,10 +112,30 @@ export async function PUT(request: NextRequest) {
             { status: 400 }
           )
         }
+        
+        // Check if user exists
+        const userToDelete = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { id: true, username: true }
+        })
+        
+        if (!userToDelete) {
+          return NextResponse.json(
+            { error: 'User not found' },
+            { status: 404 }
+          )
+        }
+        
+        // Delete user (cascade will handle related records)
         await prisma.user.delete({
           where: { id: userId }
         })
-        return NextResponse.json({ success: true, deleted: userId })
+        
+        return NextResponse.json({ 
+          success: true, 
+          deleted: userId,
+          message: `User ${userToDelete.username} deleted successfully`
+        })
 
       default:
         return NextResponse.json(
