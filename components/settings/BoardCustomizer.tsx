@@ -105,10 +105,6 @@ export default function BoardCustomizer() {
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {PIECE_SETS.map((set) => {
-            // Debug: Log all piece sets being rendered
-            if (set.id === 'neo_plastic') {
-              console.log('Rendering Plastic piece set:', set)
-            }
             return (
             <button
               key={set.id}

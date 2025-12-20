@@ -13,17 +13,53 @@ import GameInfo from './GameInfo'
 import GameChatBox from './GameChatBox'
 import QuitGameModal from './QuitGameModal'
 
+interface Player {
+  id: string
+  username: string
+  displayName: string | null
+  profileImage: string | null
+}
+
 interface ChessGameProps {
   gameId: string
   initialFen: string
   initialPgn: string
-  whitePlayer: any
-  blackPlayer: any
+  whitePlayer: Player
+  blackPlayer: Player
   timeControl: number
   whiteTimeLeft: number
   blackTimeLeft: number
   status: string
   result?: string | null
+}
+
+interface SocketMoveData {
+  gameId: string
+  fen: string
+  pgn: string
+  whiteTimeLeft: number
+  blackTimeLeft: number
+  move?: { from: string; to: string }
+}
+
+interface SocketGameUpdateData {
+  gameId: string
+  status: string
+  result?: string
+  fen?: string
+  whiteTimeLeft?: number
+  blackTimeLeft?: number
+}
+
+interface SocketTimerSyncData {
+  gameId: string
+  whiteTimeLeft?: number
+  blackTimeLeft?: number
+}
+
+interface SocketQuitData {
+  gameId: string
+  resignedPlayerId?: string
 }
 
 // FEATURE 3: Board theme colors
@@ -260,7 +296,7 @@ export default function ChessGame({
     const setupSocketListeners = () => {
       socket.emit('join-game', gameId)
 
-    socket.on('move-made', (data: any) => {
+    socket.on('move-made', (data: SocketMoveData) => {
       if (data.gameId === gameId) {
         const newGame = new Chess(data.fen)
         setGame(newGame)
@@ -286,7 +322,7 @@ export default function ChessGame({
       }
     })
 
-    socket.on('game-updated', (data: any) => {
+    socket.on('game-updated', (data: SocketGameUpdateData) => {
       if (data.gameId === gameId) {
         setStatus(data.status)
         setResult(data.result)
@@ -310,7 +346,7 @@ export default function ChessGame({
     })
 
     // Timer sync - listen for periodic timer updates
-    socket.on('timer-sync', (data: any) => {
+    socket.on('timer-sync', (data: SocketTimerSyncData) => {
       if (data.gameId === gameId) {
         if (data.whiteTimeLeft !== undefined) setWhiteTime(data.whiteTimeLeft)
         if (data.blackTimeLeft !== undefined) setBlackTime(data.blackTimeLeft)
@@ -318,7 +354,7 @@ export default function ChessGame({
     })
 
     // FEATURE 7: Quit game socket events
-    socket.on('game-quit-initiated', (data: any) => {
+    socket.on('game-quit-initiated', (data: SocketQuitData) => {
       if (data.gameId === gameId) {
         toast('Opponent left the game. Waiting for return... (30 seconds)', {
           icon: '⏱️',
@@ -327,7 +363,7 @@ export default function ChessGame({
       }
     })
 
-    socket.on('game-quit-timeout', (data: any) => {
+    socket.on('game-quit-timeout', (data: SocketQuitData) => {
       if (data.gameId === gameId) {
         setStatus('resigned')
         setResult(data.resignedPlayerId === whitePlayer.id ? 'black_wins' : 'white_wins')
@@ -335,7 +371,7 @@ export default function ChessGame({
       }
     })
 
-    socket.on('game-quit-returned', (data: any) => {
+    socket.on('game-quit-returned', (data: SocketQuitData) => {
       if (data.gameId === gameId) {
         setStatus('active')
         toast.success('Opponent returned to the game')
