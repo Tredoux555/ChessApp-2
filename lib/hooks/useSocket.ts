@@ -42,13 +42,15 @@ export function useSocket() {
       console.error('Socket connection error:', error)
       setConnected(false)
       // Show user-friendly error message after multiple failed attempts
-      if (socketInstance.io.reconnecting) {
-        const attempts = socketInstance.io.reconnectingAttempts || 0
-        if (attempts >= 3) {
+      // Track reconnection attempts manually
+      let reconnectCount = 0
+      socketInstance.io.on('reconnect_attempt', () => {
+        reconnectCount++
+        if (reconnectCount >= 3) {
           // Only show error after 3+ failed attempts to avoid spam
           console.warn('Socket connection failed multiple times. Please check your connection.')
         }
-      }
+      })
     })
 
     setSocket(socketInstance)

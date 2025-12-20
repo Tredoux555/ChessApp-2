@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, ErrorBoundary } from 'react'
+import { useState } from 'react'
 import { useAuthStore } from '@/lib/stores/useAuthStore'
 import NewGameModal from '@/components/chess/NewGameModal'
 
@@ -84,9 +84,7 @@ export default function DashboardPage() {
       </div>
 
       {showNewGame && (
-        <ErrorBoundary FallbackComponent={ErrorFallback}>
-          <NewGameModal onClose={() => setShowNewGame(false)} />
-        </ErrorBoundary>
+        <NewGameModal onClose={() => setShowNewGame(false)} />
       )}
     </div>
   )

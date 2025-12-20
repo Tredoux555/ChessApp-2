@@ -13,7 +13,7 @@ export default function Header() {
   const [mounted, setMounted] = useState(false)
   const { theme, setTheme } = useTheme()
   const { user, logout } = useAuthStore()
-  const { connected } = useSocketStore()
+  const { isConnected } = useSocketStore()
   const router = useRouter()
 
   useEffect(() => {
@@ -66,10 +66,10 @@ export default function Header() {
           </div>
 
           {/* Connection Status */}
-          <div className="flex items-center space-x-2" title={connected ? 'Connected' : 'Disconnected'}>
-            <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
+          <div className="flex items-center space-x-2" title={isConnected ? 'Connected' : 'Disconnected'}>
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
             <span className="text-xs text-gray-500 dark:text-gray-400 hidden md:inline">
-              {connected ? 'Online' : 'Offline'}
+              {isConnected ? 'Online' : 'Offline'}
             </span>
           </div>
 
