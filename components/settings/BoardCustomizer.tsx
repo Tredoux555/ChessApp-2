@@ -124,8 +124,8 @@ export default function BoardCustomizer() {
                   alt="White King" 
                   className="w-10 h-10 object-contain"
                   onError={(e) => {
-                    console.error('Failed to load piece image:', getPieceUrl(set.id, 'wk'))
-                    (e.target as HTMLImageElement).src = 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wk.png'
+                    const img = e.target as HTMLImageElement
+                    img.src = 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wk.png'
                   }}
                 />
                 <img 
@@ -133,7 +133,8 @@ export default function BoardCustomizer() {
                   alt="White Queen" 
                   className="w-10 h-10 object-contain"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wq.png'
+                    const img = e.target as HTMLImageElement
+                    img.src = 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wq.png'
                   }}
                 />
                 <img 
@@ -141,7 +142,8 @@ export default function BoardCustomizer() {
                   alt="Black King" 
                   className="w-10 h-10 object-contain"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bk.png'
+                    const img = e.target as HTMLImageElement
+                    img.src = 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bk.png'
                   }}
                 />
                 <img 
@@ -149,7 +151,8 @@ export default function BoardCustomizer() {
                   alt="Black Queen" 
                   className="w-10 h-10 object-contain"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bq.png'
+                    const img = e.target as HTMLImageElement
+                    img.src = 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bq.png'
                   }}
                 />
               </div>
