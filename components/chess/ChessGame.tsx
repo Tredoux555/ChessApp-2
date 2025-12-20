@@ -324,10 +324,9 @@ export default function ChessGame({
   useEffect(() => {
     if (!socket || !gameId) return
 
-    const setupSocketListeners = () => {
-      socket.emit('join-game', gameId)
+    socket.emit('join-game', gameId)
 
-    socket.on('move-made', (data: SocketMoveData) => {
+    const handleMoveMade = (data: SocketMoveData) => {
       if (data.gameId === gameId) {
         const newGame = new Chess(data.fen)
         setGame(newGame)
@@ -351,9 +350,9 @@ export default function ChessGame({
           toast('Opponent made a move!', { icon: '♟️' })
         }
       }
-    })
+    }
 
-    socket.on('game-updated', (data: SocketGameUpdateData) => {
+    const handleGameUpdated = (data: SocketGameUpdateData) => {
       if (data.gameId === gameId) {
         setStatus(data.status)
         setResult(data.result)
@@ -374,64 +373,67 @@ export default function ChessGame({
         if (data.whiteTimeLeft !== undefined) setWhiteTime(data.whiteTimeLeft)
         if (data.blackTimeLeft !== undefined) setBlackTime(data.blackTimeLeft)
       }
-    })
+    }
 
-    // Timer sync - listen for periodic timer updates
-    socket.on('timer-sync', (data: SocketTimerSyncData) => {
+    const handleTimerSync = (data: SocketTimerSyncData) => {
       if (data.gameId === gameId) {
         if (data.whiteTimeLeft !== undefined) setWhiteTime(data.whiteTimeLeft)
         if (data.blackTimeLeft !== undefined) setBlackTime(data.blackTimeLeft)
       }
-    })
+    }
 
-    // FEATURE 7: Quit game socket events
-    socket.on('game-quit-initiated', (data: SocketQuitData) => {
+    const handleQuitInitiated = (data: SocketQuitData) => {
       if (data.gameId === gameId) {
         toast('Opponent left the game. Waiting for return... (30 seconds)', {
           icon: '⏱️',
           duration: 5000
         })
       }
-    })
+    }
 
-    socket.on('game-quit-timeout', (data: SocketQuitData) => {
+    const handleQuitTimeout = (data: SocketQuitData) => {
       if (data.gameId === gameId) {
         setStatus('resigned')
         setResult(data.resignedPlayerId === whitePlayer.id ? 'black_wins' : 'white_wins')
         toast.success('Opponent did not return. You win!')
       }
-    })
+    }
 
-    socket.on('game-quit-returned', (data: SocketQuitData) => {
+    const handleQuitReturned = (data: SocketQuitData) => {
       if (data.gameId === gameId) {
         setStatus('active')
         toast.success('Opponent returned to the game')
       }
-    })
-
-      return () => {
-        socket.off('move-made')
-        socket.off('game-updated')
-        socket.off('timer-sync')
-        socket.off('game-quit-initiated')
-        socket.off('game-quit-timeout')
-        socket.off('game-quit-returned')
-        socket.off('reconnect')
-        socket.emit('leave-game', gameId)
-      }
     }
 
-    const cleanup = setupSocketListeners()
-
-    // Re-attach listeners on reconnection
-    socket.on('reconnect', () => {
+    const handleReconnect = () => {
       console.log('Socket reconnected, re-attaching game listeners')
-      setupSocketListeners()
-    })
+      socket.emit('join-game', gameId)
+      socket.on('move-made', handleMoveMade)
+      socket.on('game-updated', handleGameUpdated)
+      socket.on('timer-sync', handleTimerSync)
+      socket.on('game-quit-initiated', handleQuitInitiated)
+      socket.on('game-quit-timeout', handleQuitTimeout)
+      socket.on('game-quit-returned', handleQuitReturned)
+    }
+
+    socket.on('move-made', handleMoveMade)
+    socket.on('game-updated', handleGameUpdated)
+    socket.on('timer-sync', handleTimerSync)
+    socket.on('game-quit-initiated', handleQuitInitiated)
+    socket.on('game-quit-timeout', handleQuitTimeout)
+    socket.on('game-quit-returned', handleQuitReturned)
+    socket.on('reconnect', handleReconnect)
 
     return () => {
-      cleanup()
-      socket.off('reconnect')
+      socket.off('move-made', handleMoveMade)
+      socket.off('game-updated', handleGameUpdated)
+      socket.off('timer-sync', handleTimerSync)
+      socket.off('game-quit-initiated', handleQuitInitiated)
+      socket.off('game-quit-timeout', handleQuitTimeout)
+      socket.off('game-quit-returned', handleQuitReturned)
+      socket.off('reconnect', handleReconnect)
+      socket.emit('leave-game', gameId)
     }
   }, [socket, gameId, whitePlayer.id, handleGameEnd])
 
