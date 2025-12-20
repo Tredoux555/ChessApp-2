@@ -103,17 +103,22 @@ export default function BoardCustomizer() {
           Piece Set
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {PIECE_SETS.map((set) => (
+          {PIECE_SETS.map((set) => {
+            // Debug: Log all piece sets being rendered
+            if (set.id === 'neo_plastic') {
+              console.log('Rendering Plastic piece set:', set)
+            }
+            return (
             <button
               key={set.id}
               onClick={() => setPieceSet(set.id)}
-              className={`p-4 rounded-lg border-2 transition ${
+              className={`p-4 rounded-lg border-2 transition min-h-[120px] ${
                 pieceSet === set.id
                   ? 'border-blue-500 ring-2 ring-blue-300'
                   : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
               }`}
             >
-              <div className="flex justify-center gap-1 mb-2 min-h-[40px] items-center">
+              <div className="flex justify-center gap-1 mb-2 min-h-[40px] items-center relative">
                 <img 
                   src={getPieceUrl(set.id, 'wk')} 
                   alt="White King" 
@@ -146,12 +151,17 @@ export default function BoardCustomizer() {
                     (e.target as HTMLImageElement).style.display = 'none'
                   }}
                 />
+                {/* Fallback icon if all images fail */}
+                <div className="absolute inset-0 flex items-center justify-center text-2xl opacity-0 pointer-events-none" data-fallback-icon>
+                  ♟️
+                </div>
               </div>
               <p className="text-sm font-medium text-gray-900 dark:text-white text-center">
                 {set.name}
               </p>
             </button>
-          ))}
+            )
+          })}
         </div>
       </div>
 
