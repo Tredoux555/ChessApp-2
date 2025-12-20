@@ -134,7 +134,8 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ 
           success: true, 
           deleted: userId,
-          message: `User ${userToDelete.username} deleted successfully`
+          username: userToDelete.username,
+          message: `User ${userToDelete.username} has been deleted and banned from the website`
         })
 
       default:

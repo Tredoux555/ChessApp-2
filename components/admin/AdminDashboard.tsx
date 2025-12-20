@@ -175,7 +175,11 @@ export default function AdminDashboard() {
       
       if (res.ok) {
         if (action === 'delete') {
-          toast.success('User deleted successfully')
+          const deletedUsername = users.find(u => u.id === userId)?.username || 'User'
+          toast.success(`${deletedUsername} has been deleted and banned from the website`, {
+            duration: 5000,
+            icon: '🚫'
+          })
         } else {
           toast.success(`User ${action.replace('-', ' ')} successful`)
         }
@@ -397,14 +401,14 @@ export default function AdminDashboard() {
                             )}
                             <button
                               onClick={() => {
-                                if (confirm(`Delete user ${u.username}? This cannot be undone.`)) {
+                                if (confirm(`Delete and ban user ${u.username}? This will permanently delete their account and ban them from the website. This cannot be undone.`)) {
                                   handleUserAction(u.id, 'delete')
                                 }
                               }}
                               className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                               disabled={u.id === user.id || actionLoading[`${u.id}-delete`]}
                             >
-                              {actionLoading[`${u.id}-delete`] ? 'Deleting...' : 'Delete'}
+                              {actionLoading[`${u.id}-delete`] ? 'Deleting...' : 'Delete & Ban'}
                             </button>
                           </div>
                         </td>
