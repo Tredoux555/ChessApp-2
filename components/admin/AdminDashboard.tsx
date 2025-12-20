@@ -135,12 +135,18 @@ export default function AdminDashboard() {
       const data = await res.json()
       
       if (res.ok) {
-        toast.success(`User ${action} successful`)
-        loadUsers()
+        if (action === 'delete') {
+          toast.success('User deleted successfully')
+        } else {
+          toast.success(`User ${action.replace('-', ' ')} successful`)
+        }
+        // Reload users list to reflect changes
+        await loadUsers()
       } else {
         toast.error(data.error || 'Action failed')
       }
     } catch (error) {
+      console.error('User action error:', error)
       toast.error('Action failed')
     }
   }
