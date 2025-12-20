@@ -20,13 +20,24 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
 
   loadPreferences: async (userId: string) => {
     try {
-      const response = await fetch('/api/auth/me')
+      // Load current user's board preferences (userId parameter kept for API compatibility)
+      const response = await fetch('/api/user/board-preferences')
       if (response.ok) {
         const data = await response.json()
         set({
-          boardTheme: data.user.boardTheme || 'brown',
-          pieceSet: data.user.pieceSet || 'merida' // Chess.com style pieces by default
+          boardTheme: data.boardTheme || 'brown',
+          pieceSet: data.pieceSet || 'merida' // Chess.com style pieces by default
         })
+      } else {
+        // Fallback to /api/auth/me if board-preferences endpoint doesn't exist
+        const fallbackResponse = await fetch('/api/auth/me')
+        if (fallbackResponse.ok) {
+          const fallbackData = await fallbackResponse.json()
+          set({
+            boardTheme: fallbackData.user?.boardTheme || 'brown',
+            pieceSet: fallbackData.user?.pieceSet || 'merida'
+          })
+        }
       }
     } catch (error) {
       console.error('Failed to load board preferences:', error)

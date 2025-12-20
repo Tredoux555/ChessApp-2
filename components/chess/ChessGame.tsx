@@ -1,7 +1,7 @@
 // components/chess/ChessGame.tsx
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Chessboard } from 'react-chessboard'
 import { Chess } from 'chess.js'
 import { useSocketStore } from '@/lib/stores/useSocketStore'
@@ -162,40 +162,8 @@ export default function ChessGame({
     }
   }, [user, loadPreferences])
 
-  // TIMER COUNTDOWN - Decrement every second for the active player
-  useEffect(() => {
-    // Only run timer if game is active
-    if (status !== 'active') return
-    
-    const timer = setInterval(() => {
-      if (currentTurn === 'w') {
-        setWhiteTime((prev) => {
-          if (prev <= 1) {
-            // White ran out of time - black wins
-            clearInterval(timer)
-            handleTimeout('white')
-            return 0
-          }
-          return prev - 1
-        })
-      } else {
-        setBlackTime((prev) => {
-          if (prev <= 1) {
-            // Black ran out of time - white wins
-            clearInterval(timer)
-            handleTimeout('black')
-            return 0
-          }
-          return prev - 1
-        })
-      }
-    }, 1000)
-
-    return () => clearInterval(timer)
-  }, [status, currentTurn])
-
-  // Handle timeout (flag)
-  const handleTimeout = async (loser: 'white' | 'black') => {
+  // Handle timeout (flag) - useCallback to fix dependencies
+  const handleTimeout = useCallback(async (loser: 'white' | 'black') => {
     const winner = loser === 'white' ? 'black_wins' : 'white_wins'
     setStatus('completed')
     setResult(winner)
@@ -222,7 +190,46 @@ export default function ChessGame({
     }
     
     toast.error(`${loser === 'white' ? 'White' : 'Black'} ran out of time!`)
-  }
+  }, [socket, gameId])
+
+  // TIMER COUNTDOWN - Decrement every second for the active player
+  useEffect(() => {
+    // Only run timer if game is active
+    if (status !== 'active') return
+    
+    const timer = setInterval(() => {
+      // Read current turn from game state to avoid stale closure
+      setGame((prevGame) => {
+        const turn = prevGame.turn()
+        
+        if (turn === 'w') {
+          setWhiteTime((prev) => {
+            if (prev <= 1) {
+              // White ran out of time - black wins
+              clearInterval(timer)
+              handleTimeout('white')
+              return 0
+            }
+            return prev - 1
+          })
+        } else {
+          setBlackTime((prev) => {
+            if (prev <= 1) {
+              // Black ran out of time - white wins
+              clearInterval(timer)
+              handleTimeout('black')
+              return 0
+            }
+            return prev - 1
+          })
+        }
+        
+        return prevGame
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [status, handleTimeout])
 
   // FEATURE 1: Extract last move from PGN when game updates
   useEffect(() => {
@@ -268,7 +275,15 @@ export default function ChessGame({
           setLastMove({ from: data.move.from, to: data.move.to })
         }
         
-        toast('Opponent made a move!', { icon: '♟️' })
+        // Check for game end conditions after opponent's move
+        if (newGame.isCheckmate()) {
+          const winner = newGame.turn() === 'w' ? 'black_wins' : 'white_wins'
+          handleGameEnd(winner)
+        } else if (newGame.isStalemate() || newGame.isDraw() || newGame.isThreefoldRepetition()) {
+          handleGameEnd('draw')
+        } else {
+          toast('Opponent made a move!', { icon: '♟️' })
+        }
       }
     })
 
@@ -323,12 +338,13 @@ export default function ChessGame({
     return () => {
       socket.off('move-made')
       socket.off('game-updated')
+      socket.off('timer-sync')
       socket.off('game-quit-initiated')
       socket.off('game-quit-timeout')
       socket.off('game-quit-returned')
       socket.emit('leave-game', gameId)
     }
-  }, [socket, gameId, whitePlayer.id])
+  }, [socket, gameId, whitePlayer.id, handleGameEnd])
 
   // FEATURE 7: Quit timer countdown
   useEffect(() => {
@@ -372,6 +388,18 @@ export default function ChessGame({
       
       // FEATURE 1: Update last move
       setLastMove({ from: sourceSquare, to: targetSquare })
+
+      // Check for game end conditions
+      if (game.isCheckmate()) {
+        const winner = game.turn() === 'w' ? 'black_wins' : 'white_wins'
+        handleGameEnd(winner)
+        return true
+      }
+      
+      if (game.isStalemate() || game.isDraw() || game.isThreefoldRepetition()) {
+        handleGameEnd('draw')
+        return true
+      }
 
       // Use current timer values (already being decremented by the timer useEffect)
       const currentWhiteTime = whiteTime
@@ -512,6 +540,37 @@ export default function ChessGame({
       console.error('Failed to confirm quit:', error)
     }
   }
+
+  // Handle game end (checkmate, stalemate, draw) - useCallback to fix dependencies
+  const handleGameEnd = useCallback(async (result: string) => {
+    setStatus('completed')
+    setResult(result)
+    
+    socket?.emit('game-update', {
+      gameId,
+      status: 'completed',
+      result
+    })
+    
+    try {
+      await fetch(`/api/games/${gameId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'checkmate',
+          data: { winner: result }
+        })
+      })
+    } catch (error) {
+      console.error('Failed to save game end:', error)
+    }
+    
+    if (result === 'draw') {
+      toast.success('Game ended in a draw!')
+    } else {
+      toast.success('Checkmate!')
+    }
+  }, [socket, gameId])
 
   // FEATURE 1: Square styles for last move highlighting
   const squareStyles: { [key: string]: React.CSSProperties } = {}

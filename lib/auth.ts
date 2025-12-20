@@ -87,7 +87,9 @@ export async function deleteSession() {
 }
 
 function generateSessionToken(): string {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36)
+  // Use Node.js crypto for cryptographically secure random token
+  const crypto = require('crypto')
+  return crypto.randomBytes(32).toString('hex')
 }
 
 export async function requireAuth() {
