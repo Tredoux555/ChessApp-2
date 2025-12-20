@@ -46,49 +46,43 @@ export default function ChatInterface({ friendId, friendName }: ChatInterfacePro
     }
 
     const handleNewMessage = (message: any) => {
-      if (message.senderId === friendId || message.receiverId === friendId) {
-        setMessages((prev) => {
-          // Check if message already exists to avoid duplicates
-          // Check by ID first (most reliable), then by tempId
-          const existingIndex = prev.findIndex(m => 
-            (m.id && message.id && m.id === message.id) ||
-            (m.tempId && message.tempId && m.tempId === message.tempId)
-          )
-          
-          if (existingIndex !== -1) {
-            // Message exists - update it if it has new data (e.g., tempId -> real ID)
-            const existing = prev[existingIndex]
-            if (message.id && !existing.id) {
-              // Update temp message with real ID
-              const updated = [...prev]
-              updated[existingIndex] = { ...message, tempId: existing.tempId }
-              return updated
-            }
-            // Already exists with same ID, don't add duplicate
-            return prev
-          }
-          
-          // Remove from pending if it was a pending message
-          if (message.tempId) {
-            setPendingMessages(prev => {
-              const newSet = new Set(prev)
-              newSet.delete(message.tempId)
-              return newSet
-            })
-          }
-          
-          // New message - add it
-          return [...prev, message]
-        })
+      // Only process messages from/to the friend
+      if (message.senderId !== friendId && message.receiverId !== friendId) {
+        return
       }
+      
+      // If this is a message we sent, ignore it (we already have it from API response)
+      if (message.senderId === user?.id) {
+        return
+      }
+      
+      setMessages((prev) => {
+        // Check if message already exists by ID
+        if (message.id) {
+          const exists = prev.some(m => m.id === message.id)
+          if (exists) return prev
+        }
+        
+        // Check by tempId if no ID
+        if (message.tempId) {
+          const exists = prev.some(m => m.tempId === message.tempId)
+          if (exists) {
+            // Update existing temp message with real data
+            return prev.map(m => 
+              m.tempId === message.tempId ? { ...message, tempId: m.tempId } : m
+            )
+          }
+        }
+        
+        // New message - add it
+        return [...prev, message]
+      })
     }
 
     socket.on('new-message', handleNewMessage)
-    socket.on('message-sent', handleNewMessage) // Also listen for sent messages
 
     return () => {
       socket.off('new-message', handleNewMessage)
-      socket.off('message-sent', handleNewMessage)
     }
   }, [socket, friendId])
 
