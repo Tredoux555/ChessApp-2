@@ -27,9 +27,16 @@ export default function ChatPage() {
               friendName={selectedFriend.name}
             />
           ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center h-[600px] flex items-center justify-center">
-              <p className="text-gray-600 dark:text-gray-400">
-                Select a friend to start chatting
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center h-[600px] flex flex-col items-center justify-center">
+              <div className="text-6xl mb-4">💬</div>
+              <p className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                No friend selected
+              </p>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                Select a friend from the list to start chatting
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-500">
+                Don't have friends yet? Use the "+ Add" button to find and add friends!
               </p>
             </div>
           )}

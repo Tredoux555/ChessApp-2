@@ -135,7 +135,8 @@ export default function GamePage() {
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-400">Loading game...</p>
-          <p className="mt-2 text-sm text-gray-500">Game ID: {params?.id}</p>
+          <p className="mt-2 text-sm text-gray-500">Fetching game data and initializing board</p>
+          <p className="mt-1 text-xs text-gray-400">Game ID: {params?.id}</p>
         </div>
       </div>
     )

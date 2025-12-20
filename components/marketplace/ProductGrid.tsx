@@ -7,29 +7,52 @@ export default function ProductGrid() {
   const { user } = useAuthStore()
   const [products, setProducts] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchProducts = async () => {
+    try {
+      setError(null)
+      setIsLoading(true)
+      const res = await fetch('/api/products')
+      const data = await res.json()
+      if (res.ok) {
+        setProducts(data.products || [])
+      } else {
+        setError(data.error || 'Failed to load products')
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error)
+      setError('Failed to load products. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
-    async function fetchProducts() {
-      try {
-        const res = await fetch('/api/products')
-        const data = await res.json()
-        if (res.ok) {
-          setProducts(data.products || [])
-        }
-      } catch (error) {
-        console.error('Error fetching products:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
     fetchProducts()
   }, [])
 
   if (isLoading) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
-        <p className="text-gray-600 dark:text-gray-400">Loading products...</p>
+        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <p className="mt-4 text-gray-600 dark:text-gray-400">Loading products...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
+        <div className="text-red-500 text-xl mb-4">⚠️</div>
+        <p className="text-gray-900 dark:text-white font-semibold mb-2">Error loading products</p>
+        <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
+        <button
+          onClick={fetchProducts}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold"
+        >
+          Retry
+        </button>
       </div>
     )
   }

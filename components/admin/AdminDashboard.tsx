@@ -57,7 +57,14 @@ export default function AdminDashboard() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
-  const [showFlaggedOnly, setShowFlaggedOnly] = useState(true)
+  const [showFlaggedOnly, setShowFlaggedOnly] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('admin-showFlaggedOnly')
+      return saved ? saved === 'true' : true
+    }
+    return true
+  })
+  const [searchQuery, setSearchQuery] = useState('')
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
 
   // Load users
@@ -95,6 +102,33 @@ export default function AdminDashboard() {
       setLoading(false)
     }
   }
+  
+  // Persist filter preference
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('admin-showFlaggedOnly', String(showFlaggedOnly))
+    }
+  }, [showFlaggedOnly])
+  
+  // Filter functions
+  const filteredUsers = users.filter(u => 
+    !searchQuery || 
+    u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (u.displayName && u.displayName.toLowerCase().includes(searchQuery.toLowerCase()))
+  )
+  
+  const filteredMessages = messages.filter(msg =>
+    !searchQuery ||
+    msg.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    msg.sender.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    msg.receiver.username.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+  
+  const filteredProducts = products.filter(p =>
+    !searchQuery ||
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  )
 
   // Load products
   const loadProducts = async () => {
@@ -225,19 +259,29 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
-        <nav className="flex space-x-8">
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'users'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            Users ({users.length})
-          </button>
+      {/* Search and Tabs */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex-1 max-w-md">
+          <input
+            type="text"
+            placeholder={`Search ${activeTab}...`}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          />
+        </div>
+        <div className="border-b border-gray-200 dark:border-gray-700">
+          <nav className="flex space-x-8">
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'users'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Users ({filteredUsers.length}/{users.length})
+            </button>
           <button
             onClick={() => setActiveTab('messages')}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
@@ -246,7 +290,7 @@ export default function AdminDashboard() {
                 : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
             }`}
           >
-            Messages ({messages.length})
+            Messages ({filteredMessages.length}/{messages.length})
           </button>
           <button
             onClick={() => setActiveTab('products')}
@@ -256,9 +300,10 @@ export default function AdminDashboard() {
                 : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
             }`}
           >
-            Products ({products.length})
+            Products ({filteredProducts.length}/{products.length})
           </button>
         </nav>
+        </div>
       </div>
 
       {/* Tab Content */}
@@ -295,7 +340,7 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map((u) => (
+                    {filteredUsers.map((u) => (
                       <tr key={u.id} className="border-b dark:border-gray-700">
                         <td className="py-3 px-2">
                           <div className="flex items-center gap-2">
@@ -408,7 +453,7 @@ export default function AdminDashboard() {
               </p>
             ) : (
               <div className="space-y-4">
-                {messages.map((msg) => (
+                {filteredMessages.map((msg) => (
                   <div
                     key={msg.id}
                     className={`p-4 rounded-lg border ${
@@ -496,7 +541,7 @@ export default function AdminDashboard() {
                   <p className="text-center text-gray-500 py-8">No products found</p>
                 ) : (
                   <div className="space-y-4">
-                    {products.map((product) => (
+                    {filteredProducts.map((product) => (
                       <div key={product.id} className="border dark:border-gray-700 rounded-lg p-4">
                         <div className="flex gap-4">
                           {product.imageUrl ? (

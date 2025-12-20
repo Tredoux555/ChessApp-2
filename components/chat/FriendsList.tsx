@@ -32,6 +32,9 @@ export default function FriendsList({ onSelectFriend }: FriendsListProps) {
 
     if (user) {
       fetchFriends()
+      // Refresh friends list every 30 seconds to update online status
+      const interval = setInterval(fetchFriends, 30000)
+      return () => clearInterval(interval)
     }
   }, [user])
 

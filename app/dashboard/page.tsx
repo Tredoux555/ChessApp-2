@@ -1,9 +1,24 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, ErrorBoundary } from 'react'
 import { useAuthStore } from '@/lib/stores/useAuthStore'
 import NewGameModal from '@/components/chess/NewGameModal'
+
+function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
+  return (
+    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 text-center">
+      <h2 className="text-xl font-semibold text-red-900 dark:text-red-200 mb-2">Something went wrong</h2>
+      <p className="text-red-700 dark:text-red-300 mb-4">{error.message}</p>
+      <button
+        onClick={resetErrorBoundary}
+        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
+      >
+        Try again
+      </button>
+    </div>
+  )
+}
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
@@ -69,7 +84,9 @@ export default function DashboardPage() {
       </div>
 
       {showNewGame && (
-        <NewGameModal onClose={() => setShowNewGame(false)} />
+        <ErrorBoundary FallbackComponent={ErrorFallback}>
+          <NewGameModal onClose={() => setShowNewGame(false)} />
+        </ErrorBoundary>
       )}
     </div>
   )

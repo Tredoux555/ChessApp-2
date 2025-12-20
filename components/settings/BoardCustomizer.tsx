@@ -44,6 +44,7 @@ const INITIAL_PIECES: { [key: number]: string } = {
 export default function BoardCustomizer() {
   const { boardTheme, pieceSet, setBoardTheme, setPieceSet, savePreferences } = useBoardStore()
   const [isSaving, setIsSaving] = useState(false)
+  const [previewKey, setPreviewKey] = useState(0) // Force preview re-render
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -126,6 +127,7 @@ export default function BoardCustomizer() {
                   onError={(e) => {
                     const img = e.target as HTMLImageElement
                     img.src = 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wk.png'
+                    setPreviewKey(prev => prev + 1) // Force preview update
                   }}
                 />
                 <img 
