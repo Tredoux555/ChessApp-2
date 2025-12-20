@@ -94,13 +94,17 @@ export default function GamePage() {
         if (cancelled) return
 
         console.log('Game fetched successfully:', data.game)
+        if (cancelled) return // Double check before state update
+        
         if (data.game) {
-          setGame(data.game)
+          if (!cancelled) setGame(data.game)
         } else {
-          toast.error('Game data is missing')
-          setTimeout(() => router.push('/dashboard'), 1000)
+          if (!cancelled) {
+            toast.error('Game data is missing')
+            setTimeout(() => router.push('/dashboard'), 1000)
+          }
         }
-        setIsLoading(false)
+        if (!cancelled) setIsLoading(false)
       } catch (error: any) {
         if (cancelled) return
         console.error('Error fetching game:', error)

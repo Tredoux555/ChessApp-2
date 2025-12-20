@@ -27,6 +27,15 @@ export default function ProfileEditor() {
     }
   }
 
+  // Sync state when user prop changes
+  useEffect(() => {
+    if (user) {
+      setDisplayName(user.displayName || '')
+      setBio(user.bio || '')
+      setProfileImage(user.profileImage || null)
+    }
+  }, [user])
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return

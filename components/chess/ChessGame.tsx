@@ -257,7 +257,8 @@ export default function ChessGame({
   useEffect(() => {
     if (!socket || !gameId) return
 
-    socket.emit('join-game', gameId)
+    const setupSocketListeners = () => {
+      socket.emit('join-game', gameId)
 
     socket.on('move-made', (data: any) => {
       if (data.gameId === gameId) {
@@ -293,6 +294,14 @@ export default function ChessGame({
           const newGame = new Chess(data.fen)
           setGame(newGame)
           setFen(data.fen)
+          
+          // Check for game end conditions after game update
+          if (newGame.isCheckmate()) {
+            const winner = newGame.turn() === 'w' ? 'black_wins' : 'white_wins'
+            handleGameEnd(winner)
+          } else if (newGame.isStalemate() || newGame.isDraw() || newGame.isThreefoldRepetition()) {
+            handleGameEnd('draw')
+          }
         }
         // Sync timer when game updates
         if (data.whiteTimeLeft !== undefined) setWhiteTime(data.whiteTimeLeft)
@@ -333,14 +342,29 @@ export default function ChessGame({
       }
     })
 
+      return () => {
+        socket.off('move-made')
+        socket.off('game-updated')
+        socket.off('timer-sync')
+        socket.off('game-quit-initiated')
+        socket.off('game-quit-timeout')
+        socket.off('game-quit-returned')
+        socket.off('reconnect')
+        socket.emit('leave-game', gameId)
+      }
+    }
+
+    const cleanup = setupSocketListeners()
+
+    // Re-attach listeners on reconnection
+    socket.on('reconnect', () => {
+      console.log('Socket reconnected, re-attaching game listeners')
+      setupSocketListeners()
+    })
+
     return () => {
-      socket.off('move-made')
-      socket.off('game-updated')
-      socket.off('timer-sync')
-      socket.off('game-quit-initiated')
-      socket.off('game-quit-timeout')
-      socket.off('game-quit-returned')
-      socket.emit('leave-game', gameId)
+      cleanup()
+      socket.off('reconnect')
     }
   }, [socket, gameId, whitePlayer.id, handleGameEnd])
 

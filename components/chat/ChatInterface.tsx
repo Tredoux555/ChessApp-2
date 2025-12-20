@@ -16,6 +16,7 @@ export default function ChatInterface({ friendId, friendName }: ChatInterfacePro
   const [messages, setMessages] = useState<any[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  const [pendingMessages, setPendingMessages] = useState<Set<string>>(new Set())
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -48,8 +49,24 @@ export default function ChatInterface({ friendId, friendName }: ChatInterfacePro
       if (message.senderId === friendId || message.receiverId === friendId) {
         setMessages((prev) => {
           // Check if message already exists to avoid duplicates
-          const exists = prev.some(m => m.id === message.id || (m.content === message.content && m.senderId === message.senderId && Math.abs(new Date(m.createdAt).getTime() - new Date(message.createdAt).getTime()) < 1000))
+          const exists = prev.some(m => 
+            m.id === message.id || 
+            (m.content === message.content && 
+             m.senderId === message.senderId && 
+             Math.abs(new Date(m.createdAt).getTime() - new Date(message.createdAt).getTime()) < 1000) ||
+            (m.tempId && message.tempId && m.tempId === message.tempId)
+          )
           if (exists) return prev
+          
+          // Remove from pending if it was a pending message
+          if (message.tempId) {
+            setPendingMessages(prev => {
+              const newSet = new Set(prev)
+              newSet.delete(message.tempId)
+              return newSet
+            })
+          }
+          
           return [...prev, message]
         })
       }
@@ -73,7 +90,21 @@ export default function ChatInterface({ friendId, friendName }: ChatInterfacePro
     if (!newMessage.trim() || !user) return
 
     const messageContent = newMessage.trim()
+    const tempId = `temp-${Date.now()}-${Math.random()}`
     setNewMessage('')
+
+    // Add pending message immediately with tempId
+    const pendingMsg = {
+      id: tempId,
+      tempId,
+      senderId: user.id,
+      receiverId: friendId,
+      content: messageContent,
+      createdAt: new Date().toISOString(),
+      isPending: true,
+    }
+    setMessages((prev) => [...prev, pendingMsg])
+    setPendingMessages(prev => new Set(prev).add(tempId))
 
     try {
       const res = await fetch('/api/messages', {
@@ -87,14 +118,19 @@ export default function ChatInterface({ friendId, friendName }: ChatInterfacePro
 
       const data = await res.json()
       if (res.ok) {
-        // Add message to local state immediately
-        const newMsg = {
-          ...data.message,
-          senderId: user.id,
-          receiverId: friendId,
-          content: messageContent,
-        }
-        setMessages((prev) => [...prev, newMsg])
+        // Replace pending message with real message
+        setMessages((prev) => 
+          prev.map(m => 
+            m.tempId === tempId 
+              ? { ...data.message, tempId } 
+              : m
+          )
+        )
+        setPendingMessages(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(tempId)
+          return newSet
+        })
         
         // Emit socket event for real-time delivery
         if (socket) {
@@ -104,10 +140,24 @@ export default function ChatInterface({ friendId, friendName }: ChatInterfacePro
           })
         }
       } else {
+        // Remove pending message on error
+        setMessages((prev) => prev.filter(m => m.tempId !== tempId))
+        setPendingMessages(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(tempId)
+          return newSet
+        })
         toast.error(data.error || 'Failed to send message')
         setNewMessage(messageContent) // Restore message on error
       }
     } catch (error) {
+      // Remove pending message on error
+      setMessages((prev) => prev.filter(m => m.tempId !== tempId))
+      setPendingMessages(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(tempId)
+        return newSet
+      })
       console.error('Error sending message:', error)
       toast.error('Failed to send message')
       setNewMessage(messageContent) // Restore message on error

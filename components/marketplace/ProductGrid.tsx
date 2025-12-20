@@ -53,16 +53,22 @@ export default function ProductGrid() {
               className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden"
             >
               {product.imageUrl ? (
-                <div className="w-full h-64 bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+                <div className="w-full h-64 bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden relative">
                   <img
                     src={product.imageUrl}
                     alt={product.name}
                     className="w-full h-full object-contain"
                     onError={(e) => {
-                      // Hide broken image
-                      (e.target as HTMLImageElement).style.display = 'none'
+                      // Show placeholder instead of hiding
+                      const img = e.target as HTMLImageElement
+                      img.style.display = 'none'
+                      const placeholder = img.parentElement?.querySelector('.image-placeholder') as HTMLElement
+                      if (placeholder) placeholder.style.display = 'flex'
                     }}
                   />
+                  <div className="image-placeholder absolute inset-0 flex items-center justify-center bg-gray-200 dark:bg-gray-700" style={{ display: 'none' }}>
+                    <span className="text-gray-400 dark:text-gray-500 text-sm">Image unavailable</span>
+                  </div>
                 </div>
               ) : (
                 <div className="w-full h-64 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">

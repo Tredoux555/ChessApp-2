@@ -56,6 +56,7 @@ export default function AdminDashboard() {
   const [messages, setMessages] = useState<Message[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
   const [showFlaggedOnly, setShowFlaggedOnly] = useState(true)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
 
@@ -126,6 +127,10 @@ export default function AdminDashboard() {
 
   // User actions
   const handleUserAction = async (userId: string, action: string) => {
+    const actionKey = `${userId}-${action}`
+    if (actionLoading[actionKey]) return // Prevent duplicate actions
+    
+    setActionLoading(prev => ({ ...prev, [actionKey]: true }))
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PUT',
@@ -148,6 +153,12 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('User action error:', error)
       toast.error('Action failed')
+    } finally {
+      setActionLoading(prev => {
+        const newState = { ...prev }
+        delete newState[actionKey]
+        return newState
+      })
     }
   }
 
@@ -325,17 +336,18 @@ export default function AdminDashboard() {
                             {u.isAdmin ? (
                               <button
                                 onClick={() => handleUserAction(u.id, 'remove-admin')}
-                                className="px-2 py-1 bg-yellow-500 text-white rounded text-xs hover:bg-yellow-600"
-                                disabled={u.id === user.id}
+                                className="px-2 py-1 bg-yellow-500 text-white rounded text-xs hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={u.id === user.id || actionLoading[`${u.id}-remove-admin`]}
                               >
-                                Remove Admin
+                                {actionLoading[`${u.id}-remove-admin`] ? 'Loading...' : 'Remove Admin'}
                               </button>
                             ) : (
                               <button
                                 onClick={() => handleUserAction(u.id, 'make-admin')}
-                                className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                                className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={actionLoading[`${u.id}-make-admin`]}
                               >
-                                Make Admin
+                                {actionLoading[`${u.id}-make-admin`] ? 'Loading...' : 'Make Admin'}
                               </button>
                             )}
                             <button
@@ -344,10 +356,10 @@ export default function AdminDashboard() {
                                   handleUserAction(u.id, 'delete')
                                 }
                               }}
-                              className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600"
-                              disabled={u.id === user.id}
+                              className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={u.id === user.id || actionLoading[`${u.id}-delete`]}
                             >
-                              Delete
+                              {actionLoading[`${u.id}-delete`] ? 'Deleting...' : 'Delete'}
                             </button>
                           </div>
                         </td>

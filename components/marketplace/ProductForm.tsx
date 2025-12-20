@@ -10,6 +10,8 @@ interface ProductFormProps {
 
 export default function ProductForm({ onSuccess, onCancel }: ProductFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imageError, setImageError] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -70,10 +72,30 @@ export default function ProductForm({ onSuccess, onCancel }: ProductFormProps) {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const value = e.target.value
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [e.target.name]: value
     }))
+    
+    // Update image preview when imageUrl changes
+    if (e.target.name === 'imageUrl') {
+      if (value.trim()) {
+        setImagePreview(value.trim())
+        setImageError(false)
+      } else {
+        setImagePreview(null)
+        setImageError(false)
+      }
+    }
+  }
+  
+  const handleImageError = () => {
+    setImageError(true)
+  }
+  
+  const handleImageLoad = () => {
+    setImageError(false)
   }
 
   return (
@@ -164,6 +186,23 @@ export default function ProductForm({ onSuccess, onCancel }: ProductFormProps) {
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
             placeholder="https://example.com/image.jpg"
           />
+          {imagePreview && (
+            <div className="mt-2">
+              <div className="w-full h-48 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden flex items-center justify-center">
+                {imageError ? (
+                  <span className="text-gray-400 dark:text-gray-500 text-sm">Failed to load image</span>
+                ) : (
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    onError={handleImageError}
+                    onLoad={handleImageLoad}
+                    className="max-w-full max-h-full object-contain"
+                  />
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-4 pt-4">
