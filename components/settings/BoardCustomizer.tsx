@@ -125,6 +125,15 @@ export default function BoardCustomizer() {
                   className="w-10 h-10"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none'
+                    // Show fallback if images fail
+                    const container = e.currentTarget.parentElement
+                    if (container) {
+                      const visibleImages = container.querySelectorAll('img:not([style*="display: none"])')
+                      if (visibleImages.length === 0) {
+                        const fallback = container.querySelector('[data-fallback-icon]') as HTMLElement
+                        if (fallback) fallback.style.opacity = '1'
+                      }
+                    }
                   }}
                 />
                 <img 
@@ -133,6 +142,14 @@ export default function BoardCustomizer() {
                   className="w-10 h-10"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none'
+                    const container = e.currentTarget.parentElement
+                    if (container) {
+                      const visibleImages = container.querySelectorAll('img:not([style*="display: none"])')
+                      if (visibleImages.length === 0) {
+                        const fallback = container.querySelector('[data-fallback-icon]') as HTMLElement
+                        if (fallback) fallback.style.opacity = '1'
+                      }
+                    }
                   }}
                 />
                 <img 
@@ -141,6 +158,14 @@ export default function BoardCustomizer() {
                   className="w-10 h-10"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none'
+                    const container = e.currentTarget.parentElement
+                    if (container) {
+                      const visibleImages = container.querySelectorAll('img:not([style*="display: none"])')
+                      if (visibleImages.length === 0) {
+                        const fallback = container.querySelector('[data-fallback-icon]') as HTMLElement
+                        if (fallback) fallback.style.opacity = '1'
+                      }
+                    }
                   }}
                 />
                 <img 
@@ -149,14 +174,22 @@ export default function BoardCustomizer() {
                   className="w-10 h-10"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none'
+                    const container = e.currentTarget.parentElement
+                    if (container) {
+                      const visibleImages = container.querySelectorAll('img:not([style*="display: none"])')
+                      if (visibleImages.length === 0) {
+                        const fallback = container.querySelector('[data-fallback-icon]') as HTMLElement
+                        if (fallback) fallback.style.opacity = '1'
+                      }
+                    }
                   }}
                 />
                 {/* Fallback icon if all images fail */}
-                <div className="absolute inset-0 flex items-center justify-center text-2xl opacity-0 pointer-events-none" data-fallback-icon>
+                <div className="absolute inset-0 flex items-center justify-center text-2xl opacity-0 pointer-events-none transition-opacity" data-fallback-icon>
                   ♟️
                 </div>
               </div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white text-center">
+              <p className="text-sm font-medium text-gray-900 dark:text-white text-center mt-1">
                 {set.name}
               </p>
             </button>
