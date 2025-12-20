@@ -1,5 +1,6 @@
 'use client'
 
+// Admin page component
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import AdminDashboard from '@/components/admin/AdminDashboard'
