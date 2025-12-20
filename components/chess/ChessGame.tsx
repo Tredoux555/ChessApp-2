@@ -380,9 +380,15 @@ export default function ChessGame({
 
       if (move === null) return false
 
-      const newFen = game.fen()
-      const newPgn = game.pgn()
+      // Create new game instance with updated state (Chess.js mutates, so we need new instance)
+      const newGame = new Chess(game.fen())
+      newGame.move({ from: sourceSquare, to: targetSquare, promotion: 'q' })
+      
+      const newFen = newGame.fen()
+      const newPgn = newGame.pgn()
 
+      // Update all game state
+      setGame(newGame)
       setFen(newFen)
       setPgn(newPgn)
       
@@ -390,13 +396,13 @@ export default function ChessGame({
       setLastMove({ from: sourceSquare, to: targetSquare })
 
       // Check for game end conditions
-      if (game.isCheckmate()) {
-        const winner = game.turn() === 'w' ? 'black_wins' : 'white_wins'
+      if (newGame.isCheckmate()) {
+        const winner = newGame.turn() === 'w' ? 'black_wins' : 'white_wins'
         handleGameEnd(winner)
         return true
       }
       
-      if (game.isStalemate() || game.isDraw() || game.isThreefoldRepetition()) {
+      if (newGame.isStalemate() || newGame.isDraw() || newGame.isThreefoldRepetition()) {
         handleGameEnd('draw')
         return true
       }
