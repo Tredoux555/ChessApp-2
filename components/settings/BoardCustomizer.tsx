@@ -118,76 +118,40 @@ export default function BoardCustomizer() {
                   : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
               }`}
             >
-              <div className="flex justify-center gap-1 mb-2 min-h-[40px] items-center relative">
+              <div className="flex justify-center gap-1 mb-2 min-h-[40px] items-center">
                 <img 
                   src={getPieceUrl(set.id, 'wk')} 
                   alt="White King" 
-                  className="w-10 h-10"
+                  className="w-10 h-10 object-contain"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none'
-                    // Show fallback if images fail
-                    const container = e.currentTarget.parentElement
-                    if (container) {
-                      const visibleImages = container.querySelectorAll('img:not([style*="display: none"])')
-                      if (visibleImages.length === 0) {
-                        const fallback = container.querySelector('[data-fallback-icon]') as HTMLElement
-                        if (fallback) fallback.style.opacity = '1'
-                      }
-                    }
+                    console.error('Failed to load piece image:', getPieceUrl(set.id, 'wk'))
+                    (e.target as HTMLImageElement).src = 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wk.png'
                   }}
                 />
                 <img 
                   src={getPieceUrl(set.id, 'wq')} 
                   alt="White Queen" 
-                  className="w-10 h-10"
+                  className="w-10 h-10 object-contain"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none'
-                    const container = e.currentTarget.parentElement
-                    if (container) {
-                      const visibleImages = container.querySelectorAll('img:not([style*="display: none"])')
-                      if (visibleImages.length === 0) {
-                        const fallback = container.querySelector('[data-fallback-icon]') as HTMLElement
-                        if (fallback) fallback.style.opacity = '1'
-                      }
-                    }
+                    (e.target as HTMLImageElement).src = 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wq.png'
                   }}
                 />
                 <img 
                   src={getPieceUrl(set.id, 'bk')} 
                   alt="Black King" 
-                  className="w-10 h-10"
+                  className="w-10 h-10 object-contain"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none'
-                    const container = e.currentTarget.parentElement
-                    if (container) {
-                      const visibleImages = container.querySelectorAll('img:not([style*="display: none"])')
-                      if (visibleImages.length === 0) {
-                        const fallback = container.querySelector('[data-fallback-icon]') as HTMLElement
-                        if (fallback) fallback.style.opacity = '1'
-                      }
-                    }
+                    (e.target as HTMLImageElement).src = 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bk.png'
                   }}
                 />
                 <img 
                   src={getPieceUrl(set.id, 'bq')} 
                   alt="Black Queen" 
-                  className="w-10 h-10"
+                  className="w-10 h-10 object-contain"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none'
-                    const container = e.currentTarget.parentElement
-                    if (container) {
-                      const visibleImages = container.querySelectorAll('img:not([style*="display: none"])')
-                      if (visibleImages.length === 0) {
-                        const fallback = container.querySelector('[data-fallback-icon]') as HTMLElement
-                        if (fallback) fallback.style.opacity = '1'
-                      }
-                    }
+                    (e.target as HTMLImageElement).src = 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bq.png'
                   }}
                 />
-                {/* Fallback icon if all images fail */}
-                <div className="absolute inset-0 flex items-center justify-center text-2xl opacity-0 pointer-events-none transition-opacity" data-fallback-icon>
-                  ♟️
-                </div>
               </div>
               <p className="text-sm font-medium text-gray-900 dark:text-white text-center mt-1">
                 {set.name}
@@ -216,16 +180,23 @@ export default function BoardCustomizer() {
               return (
                 <div
                   key={i}
-                  className="w-10 h-10 flex items-center justify-center"
+                  className="w-10 h-10 flex items-center justify-center relative"
                   style={{ backgroundColor: bgColor }}
                 >
-                  {piece && (
+                  {piece ? (
                     <img 
-                      src={getPieceUrl(pieceSet, piece)} 
+                      src={getPieceUrl(pieceSet || 'merida', piece)} 
                       alt={piece}
-                      className="w-9 h-9"
+                      className="w-full h-full object-contain p-0.5"
+                      onError={(e) => {
+                        // Fallback to neo pieces if the selected set fails
+                        const fallbackUrl = `https://images.chesscomfiles.com/chess-themes/pieces/neo/150/${piece}.png`
+                        if ((e.target as HTMLImageElement).src !== fallbackUrl) {
+                          (e.target as HTMLImageElement).src = fallbackUrl
+                        }
+                      }}
                     />
-                  )}
+                  ) : null}
                 </div>
               )
             })}
