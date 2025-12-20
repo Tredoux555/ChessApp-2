@@ -228,6 +228,37 @@ export default function ChessGame({
     toast.error(`${loser === 'white' ? 'White' : 'Black'} ran out of time!`)
   }, [socket, gameId])
 
+  // Handle game end (checkmate, stalemate, draw) - useCallback to fix dependencies
+  const handleGameEnd = useCallback(async (result: string) => {
+    setStatus('completed')
+    setResult(result)
+    
+    socket?.emit('game-update', {
+      gameId,
+      status: 'completed',
+      result
+    })
+    
+    try {
+      await fetch(`/api/games/${gameId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'checkmate',
+          data: { winner: result }
+        })
+      })
+    } catch (error) {
+      console.error('Failed to save game end:', error)
+    }
+    
+    if (result === 'draw') {
+      toast.success('Game ended in a draw!')
+    } else {
+      toast.success('Checkmate!')
+    }
+  }, [socket, gameId])
+
   // TIMER COUNTDOWN - Decrement every second for the active player
   useEffect(() => {
     // Only run timer if game is active
@@ -602,37 +633,6 @@ export default function ChessGame({
       console.error('Failed to confirm quit:', error)
     }
   }
-
-  // Handle game end (checkmate, stalemate, draw) - useCallback to fix dependencies
-  const handleGameEnd = useCallback(async (result: string) => {
-    setStatus('completed')
-    setResult(result)
-    
-    socket?.emit('game-update', {
-      gameId,
-      status: 'completed',
-      result
-    })
-    
-    try {
-      await fetch(`/api/games/${gameId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'checkmate',
-          data: { winner: result }
-        })
-      })
-    } catch (error) {
-      console.error('Failed to save game end:', error)
-    }
-    
-    if (result === 'draw') {
-      toast.success('Game ended in a draw!')
-    } else {
-      toast.success('Checkmate!')
-    }
-  }, [socket, gameId])
 
   // FEATURE 1: Square styles for last move highlighting
   const squareStyles: { [key: string]: React.CSSProperties } = {}
