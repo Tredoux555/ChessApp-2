@@ -113,7 +113,7 @@ export default function BoardCustomizer() {
                   : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
               }`}
             >
-              <div className="flex justify-center gap-1 mb-2">
+              <div className="flex justify-center gap-1 mb-2 min-h-[40px] items-center">
                 <img 
                   src={getPieceUrl(set.id, 'wk')} 
                   alt="White King" 
@@ -147,7 +147,7 @@ export default function BoardCustomizer() {
                   }}
                 />
               </div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
+              <p className="text-sm font-medium text-gray-900 dark:text-white text-center">
                 {set.name}
               </p>
             </button>
