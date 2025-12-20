@@ -191,12 +191,37 @@ export default function ChessGame({
   const currentTurn = game.turn() // 'w' or 'b'
   const isMyTurn = (isPlayerWhite && currentTurn === 'w') || (isPlayerBlack && currentTurn === 'b')
 
-  // FEATURE 3: Load user's board preferences
-  useEffect(() => {
-    if (user) {
-      loadPreferences(user.id)
+  // Handle game end (checkmate, stalemate, draw) - useCallback to fix dependencies
+  // MUST be defined before any useEffects that use it
+  const handleGameEnd = useCallback(async (result: string) => {
+    setStatus('completed')
+    setResult(result)
+    
+    socket?.emit('game-update', {
+      gameId,
+      status: 'completed',
+      result
+    })
+    
+    try {
+      await fetch(`/api/games/${gameId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'checkmate',
+          data: { winner: result }
+        })
+      })
+    } catch (error) {
+      console.error('Failed to save game end:', error)
     }
-  }, [user, loadPreferences])
+    
+    if (result === 'draw') {
+      toast.success('Game ended in a draw!')
+    } else {
+      toast.success('Checkmate!')
+    }
+  }, [socket, gameId])
 
   // Handle timeout (flag) - useCallback to fix dependencies
   const handleTimeout = useCallback(async (loser: 'white' | 'black') => {
@@ -228,36 +253,12 @@ export default function ChessGame({
     toast.error(`${loser === 'white' ? 'White' : 'Black'} ran out of time!`)
   }, [socket, gameId])
 
-  // Handle game end (checkmate, stalemate, draw) - useCallback to fix dependencies
-  const handleGameEnd = useCallback(async (result: string) => {
-    setStatus('completed')
-    setResult(result)
-    
-    socket?.emit('game-update', {
-      gameId,
-      status: 'completed',
-      result
-    })
-    
-    try {
-      await fetch(`/api/games/${gameId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'checkmate',
-          data: { winner: result }
-        })
-      })
-    } catch (error) {
-      console.error('Failed to save game end:', error)
+  // FEATURE 3: Load user's board preferences
+  useEffect(() => {
+    if (user) {
+      loadPreferences(user.id)
     }
-    
-    if (result === 'draw') {
-      toast.success('Game ended in a draw!')
-    } else {
-      toast.success('Checkmate!')
-    }
-  }, [socket, gameId])
+  }, [user, loadPreferences])
 
   // TIMER COUNTDOWN - Decrement every second for the active player
   useEffect(() => {
