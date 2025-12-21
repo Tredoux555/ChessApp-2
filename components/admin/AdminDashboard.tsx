@@ -463,7 +463,7 @@ export default function AdminDashboard() {
                               <button
                                 onClick={() => handleUserAction(u.id, 'remove-admin')}
                                 className="px-2 py-1 bg-yellow-500 text-white rounded text-xs hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled={u.id === user.id || actionLoading[`${u.id}-remove-admin`]}
+                                disabled={u.id === user?.id || actionLoading[`${u.id}-remove-admin`]}
                               >
                                 {actionLoading[`${u.id}-remove-admin`] ? 'Loading...' : 'Remove Admin'}
                               </button>
