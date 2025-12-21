@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/stores/useAuthStore'
 
 export default function ProductGrid() {
   const { user } = useAuthStore()
+  const router = useRouter()
   const [products, setProducts] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -80,7 +82,7 @@ export default function ProductGrid() {
                   <img
                     src={product.imageUrl}
                     alt={product.name}
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-cover"
                     onError={(e) => {
                       // Show placeholder instead of hiding
                       const img = e.target as HTMLImageElement
@@ -111,7 +113,10 @@ export default function ProductGrid() {
                   <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
                     ¥{product.price.toFixed(2)}
                   </span>
-                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold">
+                  <button 
+                    onClick={() => router.push(`/marketplace/product/${product.id}`)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition"
+                  >
                     View Details
                   </button>
                 </div>
