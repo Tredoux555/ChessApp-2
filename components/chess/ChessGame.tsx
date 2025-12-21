@@ -329,6 +329,13 @@ export default function ChessGame({
 
     const handleMoveMade = (data: SocketMoveData) => {
       if (data.gameId === gameId) {
+        // Don't update if this is our own move (we already updated locally)
+        // Check if the move is from the opponent
+        const isOpponentMove = (isPlayerWhite && data.fen && new Chess(data.fen).turn() === 'b') ||
+                               (isPlayerBlack && data.fen && new Chess(data.fen).turn() === 'w') ||
+                               (data.fen && new Chess(fen).turn() !== new Chess(data.fen).turn())
+        
+        // Always update the game state from server (source of truth)
         const newGame = new Chess(data.fen)
         setGame(newGame)
         setFen(data.fen)
@@ -341,14 +348,17 @@ export default function ChessGame({
           setLastMove({ from: data.move.from, to: data.move.to })
         }
         
-        // Check for game end conditions after opponent's move
-        if (newGame.isCheckmate()) {
-          const winner = newGame.turn() === 'w' ? 'black_wins' : 'white_wins'
-          handleGameEnd(winner)
-        } else if (newGame.isStalemate() || newGame.isDraw() || newGame.isThreefoldRepetition()) {
-          handleGameEnd('draw')
-        } else {
-          toast('Opponent made a move!', { icon: '♟️' })
+        // Only show toast for opponent moves
+        if (isOpponentMove || !isMyTurn) {
+          // Check for game end conditions after opponent's move
+          if (newGame.isCheckmate()) {
+            const winner = newGame.turn() === 'w' ? 'black_wins' : 'white_wins'
+            handleGameEnd(winner)
+          } else if (newGame.isStalemate() || newGame.isDraw() || newGame.isThreefoldRepetition()) {
+            handleGameEnd('draw')
+          } else {
+            toast('Opponent made a move!', { icon: '♟️' })
+          }
         }
       }
     }

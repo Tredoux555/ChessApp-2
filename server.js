@@ -194,13 +194,14 @@ app.prepare().then(() => {
       const roomSize = room ? room.size : 0
       console.log(`[MOVE] Room size for game ${data.gameId}: ${roomSize}`)
       
-      // Broadcast to all other players in the game room (not the sender)
-      socket.to(`game:${data.gameId}`).emit('move-made', {
+      // Broadcast to ALL players in the game room (including sender for consistency)
+      // This ensures both players see the move immediately
+      io.to(`game:${data.gameId}`).emit('move-made', {
         ...data,
         whiteTimeLeft: data.whiteTimeLeft,
         blackTimeLeft: data.blackTimeLeft,
       })
-      console.log(`[MOVE] Broadcast sent to game ${data.gameId} (excluding sender ${socket.id})`)
+      console.log(`[MOVE] Broadcast sent to all players in game ${data.gameId}`)
     })
 
     // Game state update
