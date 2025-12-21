@@ -75,14 +75,13 @@ app.prepare().then(() => {
               blackTime = Math.max(0, game.blackTimeLeft - elapsedSeconds)
             }
             
-            // Only sync if times have changed significantly (avoid unnecessary updates)
-            if (Math.abs(whiteTime - game.whiteTimeLeft) > 0 || Math.abs(blackTime - game.blackTimeLeft) > 0) {
-              io.to(`game:${gameId}`).emit('timer-sync', {
-                gameId,
-                whiteTimeLeft: whiteTime,
-                blackTimeLeft: blackTime
-              })
-            }
+            // Always sync timer (server is source of truth)
+            // This ensures perfect synchronization between players
+            io.to(`game:${gameId}`).emit('timer-sync', {
+              gameId,
+              whiteTimeLeft: whiteTime,
+              blackTimeLeft: blackTime
+            })
           } else if (!game) {
             // Game was deleted, remove from activeGames
             activeGames.delete(gameId)
