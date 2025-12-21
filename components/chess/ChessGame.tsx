@@ -424,6 +424,15 @@ export default function ChessGame({
       }
     }
 
+    const handlePlayerResigned = (data: any) => {
+      if (data.gameId === gameId) {
+        setStatus('completed')
+        setResult(data.winner)
+        const resignedPlayer = data.resignedPlayerId === whitePlayer.id ? whitePlayer : blackPlayer
+        toast.success(`${resignedPlayer.displayName || resignedPlayer.username} has resigned. You win!`)
+      }
+    }
+
     const handleReconnect = () => {
       console.log('Socket reconnected, re-attaching game listeners')
       socket.emit('join-game', gameId)
@@ -433,6 +442,7 @@ export default function ChessGame({
       socket.on('game-quit-initiated', handleQuitInitiated)
       socket.on('game-quit-timeout', handleQuitTimeout)
       socket.on('game-quit-returned', handleQuitReturned)
+      socket.on('player-resigned', handlePlayerResigned)
     }
 
     socket.on('move-made', handleMoveMade)
@@ -441,6 +451,7 @@ export default function ChessGame({
     socket.on('game-quit-initiated', handleQuitInitiated)
     socket.on('game-quit-timeout', handleQuitTimeout)
     socket.on('game-quit-returned', handleQuitReturned)
+    socket.on('player-resigned', handlePlayerResigned)
     socket.on('reconnect', handleReconnect)
 
     return () => {
@@ -450,6 +461,7 @@ export default function ChessGame({
       socket.off('game-quit-initiated', handleQuitInitiated)
       socket.off('game-quit-timeout', handleQuitTimeout)
       socket.off('game-quit-returned', handleQuitReturned)
+      socket.off('player-resigned', handlePlayerResigned)
       socket.off('reconnect', handleReconnect)
       socket.emit('leave-game', gameId)
     }
@@ -566,10 +578,21 @@ export default function ChessGame({
         method: 'POST'
       })
       
+      // Update game via API first
+      await fetch(`/api/games/${gameId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'resign',
+        }),
+      })
+      
+      // Then emit socket event to notify opponent
       socket?.emit('resign', {
         gameId,
         playerId: user?.id,
-        winner: isPlayerWhite ? 'black_wins' : 'white_wins'
+        winner: isPlayerWhite ? 'black_wins' : 'white_wins',
+        resignedPlayerId: user?.id
       })
       
       toast.success('You have resigned from the game')

@@ -120,7 +120,8 @@ export async function POST(request: NextRequest) {
         timeControl: timeInSeconds,
         whiteTimeLeft: timeInSeconds,
         blackTimeLeft: timeInSeconds,
-        lastMoveAt: new Date(),
+        status: 'pending', // Game starts as pending until accepted
+        // Don't set lastMoveAt until challenge is accepted
       },
       include: {
         whitePlayer: {
