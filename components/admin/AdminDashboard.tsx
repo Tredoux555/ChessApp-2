@@ -50,8 +50,9 @@ interface Product {
 }
 
 export default function AdminDashboard() {
-  const { user } = useAuthStore()
+  const { user, isLoading: authLoading } = useAuthStore()
   const [activeTab, setActiveTab] = useState<'users' | 'messages' | 'products' | 'orders'>('users')
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState(true)
   const [users, setUsers] = useState<User[]>([])
   const [messages, setMessages] = useState<Message[]>([])
   const [products, setProducts] = useState<Product[]>([])
@@ -281,10 +282,42 @@ export default function AdminDashboard() {
     }
   }
 
+  // Load user from API if not in store
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (!user && !authLoading) {
+        try {
+          const res = await fetch('/api/auth/me', { credentials: 'include' })
+          const data = await res.json()
+          if (res.ok && data.user) {
+            useAuthStore.getState().setUser(data.user)
+          }
+        } catch (error) {
+          console.error('Error checking admin status:', error)
+        } finally {
+          setIsCheckingAdmin(false)
+        }
+      } else {
+        setIsCheckingAdmin(false)
+      }
+    }
+    checkAdmin()
+  }, [user, authLoading])
+
+  if (isCheckingAdmin || authLoading) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
+        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
+      </div>
+    )
+  }
+
   if (!user?.isAdmin) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
         <p className="text-gray-600 dark:text-gray-400">Access denied. Admin only.</p>
+        <p className="text-sm text-gray-500 mt-2">User: {user?.username || 'Not loaded'}, isAdmin: {String(user?.isAdmin)}</p>
       </div>
     )
   }
