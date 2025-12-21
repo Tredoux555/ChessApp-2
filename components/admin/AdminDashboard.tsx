@@ -297,14 +297,14 @@ export default function AdminDashboard() {
         } finally {
           setIsCheckingAdmin(false)
         }
-      } else {
+      } else if (user) {
         setIsCheckingAdmin(false)
       }
     }
     checkAdmin()
   }, [user, authLoading])
 
-  if (isCheckingAdmin || authLoading) {
+  if (isCheckingAdmin || (authLoading && !user)) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
         <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
@@ -313,11 +313,17 @@ export default function AdminDashboard() {
     )
   }
 
-  if (!user?.isAdmin) {
+  // Check admin status - allow if user exists and isAdmin is true
+  const currentUser = user || useAuthStore.getState().user
+  if (!currentUser || !currentUser.isAdmin) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
         <p className="text-gray-600 dark:text-gray-400">Access denied. Admin only.</p>
-        <p className="text-sm text-gray-500 mt-2">User: {user?.username || 'Not loaded'}, isAdmin: {String(user?.isAdmin)}</p>
+        {currentUser && (
+          <p className="text-sm text-gray-500 mt-2">
+            Logged in as: {currentUser.username} (isAdmin: {String(currentUser.isAdmin)})
+          </p>
+        )}
       </div>
     )
   }

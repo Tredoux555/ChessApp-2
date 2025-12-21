@@ -51,7 +51,7 @@ export default function AdminPage() {
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
         Admin Panel
       </h1>
-      <AdminDashboard />
+      {user && <AdminDashboard />}
     </div>
   )
 }
