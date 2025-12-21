@@ -438,7 +438,9 @@ export default function ChessGame({
     }
 
     const handleReconnect = () => {
-      console.log('Socket reconnected, re-attaching game listeners')
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Socket reconnected, re-attaching game listeners')
+      }
       socket.emit('join-game', gameId)
       socket.on('move-made', handleMoveMade)
       socket.on('game-updated', handleGameUpdated)
