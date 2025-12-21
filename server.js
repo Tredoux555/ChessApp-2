@@ -222,7 +222,12 @@ app.prepare().then(() => {
 
     // Resign
     socket.on('resign', (data) => {
-      io.to(`game:${data.gameId}`).emit('player-resigned', data)
+      // Broadcast resignation to all players in the game
+      io.to(`game:${data.gameId}`).emit('player-resigned', {
+        gameId: data.gameId,
+        resignedPlayerId: data.resignedPlayerId || data.playerId,
+        winner: data.winner
+      })
       // Also emit game-updated to sync state
       io.to(`game:${data.gameId}`).emit('game-updated', {
         gameId: data.gameId,
