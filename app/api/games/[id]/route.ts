@@ -373,11 +373,20 @@ export async function PUT(
         break
 
       case 'decline-challenge':
-        // Only black player (challenged player) can decline
-        if (game.blackPlayerId !== session.id) {
+        // Check if user is a player in this game
+        const isPlayerDecline = game.whitePlayerId === session.id || game.blackPlayerId === session.id
+        if (!isPlayerDecline) {
           return NextResponse.json(
-            { error: 'Only the challenged player can decline' },
+            { error: 'You are not a player in this game' },
             { status: 403 }
+          )
+        }
+        
+        // Only pending games can be declined
+        if (game.status !== 'pending') {
+          return NextResponse.json(
+            { error: 'Game is not pending' },
+            { status: 400 }
           )
         }
         

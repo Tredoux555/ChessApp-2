@@ -750,6 +750,17 @@ export default function ChessGame({
       </div>
 
       <div className="lg:w-96 space-y-4">
+        {status === 'pending' && (
+          <div className="bg-yellow-100 dark:bg-yellow-900 border-2 border-yellow-400 rounded-lg p-4 text-center">
+            <p className="text-yellow-800 dark:text-yellow-200 font-semibold text-lg">
+              ⏳ Waiting for opponent to accept...
+            </p>
+            <p className="text-yellow-700 dark:text-yellow-300 text-sm mt-2">
+              The game will start once your opponent accepts the challenge.
+            </p>
+          </div>
+        )}
+        
         <GameInfo
           whitePlayer={whitePlayer}
           blackPlayer={blackPlayer}

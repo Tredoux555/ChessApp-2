@@ -131,7 +131,9 @@ export default function NotificationListener() {
         toast.error(error.error || 'Failed to accept challenge')
       }
     } catch (error) {
-      console.error('Accept challenge error:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Accept challenge error:', error)
+      }
       toast.error('An error occurred')
     }
   }
@@ -159,7 +161,9 @@ export default function NotificationListener() {
         toast.error('Failed to decline challenge')
       }
     } catch (error) {
-      console.error('Decline challenge error:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Decline challenge error:', error)
+      }
       toast.error('An error occurred')
     }
 
