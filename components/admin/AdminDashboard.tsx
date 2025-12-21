@@ -483,7 +483,7 @@ export default function AdminDashboard() {
                                 }
                               }}
                               className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                              disabled={u.id === user.id || actionLoading[`${u.id}-delete`]}
+                              disabled={u.id === user?.id || actionLoading[`${u.id}-delete`]}
                             >
                               {actionLoading[`${u.id}-delete`] ? 'Deleting...' : 'Delete & Ban'}
                             </button>
