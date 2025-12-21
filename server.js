@@ -18,7 +18,9 @@ app.prepare().then(() => {
       const parsedUrl = parse(req.url, true)
       await handle(req, res, parsedUrl)
     } catch (err) {
-      console.error('Error occurred handling', req.url, err)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error occurred handling', req.url, err)
+      }
       res.statusCode = 500
       res.end('internal server error')
     }
@@ -112,18 +114,24 @@ app.prepare().then(() => {
           })
           
           if (!user || user.isBanned) {
-            console.warn(`Invalid or banned user attempted socket auth: ${userId}`)
+            if (process.env.NODE_ENV === 'development') {
+              console.warn(`Invalid or banned user attempted socket auth: ${userId}`)
+            }
             socket.disconnect()
             return
           }
           
           if (user.isSuspended) {
-            console.warn(`Suspended user attempted socket auth: ${userId}`)
+            if (process.env.NODE_ENV === 'development') {
+              console.warn(`Suspended user attempted socket auth: ${userId}`)
+            }
             socket.disconnect()
             return
           }
         } catch (error) {
-          console.error('Socket auth verification error:', error)
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Socket auth verification error:', error)
+          }
           socket.disconnect()
           return
         }
@@ -131,7 +139,9 @@ app.prepare().then(() => {
         connectedUsers.set(socket.id, userId)
         socket.data.userId = userId
         socket.join(`user:${userId}`)
-        console.log(`User ${userId} authenticated on socket ${socket.id}`)
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`User ${userId} authenticated on socket ${socket.id}`)
+        }
         
         // Mark user online
         try {
@@ -159,7 +169,9 @@ app.prepare().then(() => {
             io.to(`user:${friendId}`).emit('user-online', { userId })
           })
         } catch (error) {
-          console.error('Authenticate error:', error)
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Authenticate error:', error)
+          }
         }
       }
     })
@@ -198,19 +210,23 @@ app.prepare().then(() => {
     // Leave game room
     socket.on('leave-game', (gameId) => {
       socket.leave(`game:${gameId}`)
-      console.log(`Socket ${socket.id} left game ${gameId}`)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Socket ${socket.id} left game ${gameId}`)
+      }
     })
 
     // Chess move made
     socket.on('move', (data) => {
-      console.log(`[MOVE] Received move for game ${data.gameId} from socket ${socket.id}`)
-      console.log(`[MOVE] FEN: ${data.fen?.substring(0, 50)}...`)
-      console.log(`[MOVE] Times - White: ${data.whiteTimeLeft}, Black: ${data.blackTimeLeft}`)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[MOVE] Received move for game ${data.gameId} from socket ${socket.id}`)
+        console.log(`[MOVE] FEN: ${data.fen?.substring(0, 50)}...`)
+        console.log(`[MOVE] Times - White: ${data.whiteTimeLeft}, Black: ${data.blackTimeLeft}`)
+      }
       
-      // Get all sockets in the game room
-      const room = io.sockets.adapter.rooms.get(`game:${data.gameId}`)
-      const roomSize = room ? room.size : 0
-      console.log(`[MOVE] Room size for game ${data.gameId}: ${roomSize}`)
+      // Ensure game is in activeGames for timer sync
+      if (!activeGames.has(data.gameId)) {
+        activeGames.set(data.gameId, true)
+      }
       
       // Broadcast to ALL players in the game room (including sender for consistency)
       // This ensures both players see the move immediately
@@ -219,14 +235,18 @@ app.prepare().then(() => {
         whiteTimeLeft: data.whiteTimeLeft,
         blackTimeLeft: data.blackTimeLeft,
       })
-      console.log(`[MOVE] Broadcast sent to all players in game ${data.gameId}`)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[MOVE] Broadcast sent to all players in game ${data.gameId}`)
+      }
     })
 
     // Game state update
     socket.on('game-update', (data) => {
       // Broadcast to all other players in the game room (not the sender)
       socket.to(`game:${data.gameId}`).emit('game-updated', data)
-      console.log(`Game update broadcast to game ${data.gameId}`)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Game update broadcast to game ${data.gameId}`)
+      }
     })
 
     // Draw offer
@@ -311,7 +331,9 @@ app.prepare().then(() => {
           io.to(`user:${friendId}`).emit('user-online', { userId })
         })
       } catch (error) {
-        console.error('User online error:', error)
+        if (process.env.NODE_ENV === 'development') {
+          console.error('User online error:', error)
+        }
       }
     })
 
@@ -344,7 +366,9 @@ app.prepare().then(() => {
           io.to(`user:${friendId}`).emit('user-offline', { userId })
         })
       } catch (error) {
-        console.error('User offline error:', error)
+        if (process.env.NODE_ENV === 'development') {
+          console.error('User offline error:', error)
+        }
       }
     })
 
@@ -430,7 +454,9 @@ app.prepare().then(() => {
       const userId = connectedUsers.get(socket.id) || socket.data.userId
       if (userId) {
         connectedUsers.delete(socket.id)
-        console.log(`User ${userId} disconnected`)
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`User ${userId} disconnected`)
+        }
         
         try {
           await prisma.user.update({
@@ -460,10 +486,14 @@ app.prepare().then(() => {
             io.to(`user:${friendId}`).emit('user-offline', { userId })
           })
         } catch (error) {
-          console.error('Disconnect error:', error)
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Disconnect error:', error)
+          }
         }
       }
-      console.log('Client disconnected:', socket.id)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Client disconnected:', socket.id)
+      }
     })
   })
 
