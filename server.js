@@ -250,10 +250,9 @@ app.prepare().then(() => {
         tempId: data.tempId || null
       }
       
-      // Send to receiver
+      // Send to receiver only (sender already has the message from API response)
       io.to(`user:${data.receiverId}`).emit('new-message', messageData)
-      // Send back to sender for confirmation (only if not already in their list)
-      socket.emit('message-sent', messageData)
+      // Don't send back to sender - they already have it from the API response
     })
 
     // FEATURE 4: In-Game Chat
