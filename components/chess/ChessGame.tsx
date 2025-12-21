@@ -213,7 +213,9 @@ export default function ChessGame({
         })
       })
     } catch (error) {
-      console.error('Failed to save game end:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to save game end:', error)
+      }
     }
     
     if (result === 'draw') {
@@ -247,7 +249,9 @@ export default function ChessGame({
         })
       })
     } catch (error) {
-      console.error('Failed to save timeout result:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to save timeout result:', error)
+      }
     }
     
     toast.error(`${loser === 'white' ? 'White' : 'Black'} ran out of time!`)
@@ -316,7 +320,9 @@ export default function ChessGame({
           }
         }
       } catch (error) {
-        console.error('Error parsing last move:', error)
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error parsing last move:', error)
+        }
       }
     }
   }, [pgn])
@@ -485,7 +491,9 @@ export default function ChessGame({
     }
 
     if (!socket || !socket.connected) {
-      console.error('Socket not connected, cannot make move')
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Socket not connected, cannot make move')
+      }
       toast.error('Connection lost. Please refresh the page.')
       return false
     }
@@ -559,7 +567,9 @@ export default function ChessGame({
 
       return true
     } catch (error) {
-      console.error('Move error:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Move error:', error)
+      }
       return false
     }
   }
@@ -599,7 +609,9 @@ export default function ChessGame({
       // Navigate to dashboard
       window.location.href = '/dashboard'
     } catch (error) {
-      console.error('Failed to resign:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to resign:', error)
+      }
       toast.error('Failed to resign')
     }
   }
@@ -628,7 +640,9 @@ export default function ChessGame({
         })
       }
     } catch (error) {
-      console.error('Failed to initiate quit:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to initiate quit:', error)
+      }
       toast.error('Failed to quit game')
     }
   }
@@ -652,7 +666,9 @@ export default function ChessGame({
         toast.success('Returned to game')
       }
     } catch (error) {
-      console.error('Failed to return to game:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to return to game:', error)
+      }
       toast.error('Failed to return to game')
     }
   }
@@ -671,7 +687,9 @@ export default function ChessGame({
       setShowQuitModal(false)
       window.location.href = '/dashboard'
     } catch (error) {
-      console.error('Failed to confirm quit:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to confirm quit:', error)
+      }
     }
   }
 
@@ -700,7 +718,9 @@ export default function ChessGame({
         style={{ width: squareWidth, height: squareWidth }}
         onError={(e) => {
           // If image fails, try to load from a working set as last resort
-          console.warn(`Failed to load piece image: ${pieceSetData[piece as keyof typeof pieceSetData]}`)
+          if (process.env.NODE_ENV === 'development') {
+            console.warn(`Failed to load piece image: ${pieceSetData[piece as keyof typeof pieceSetData]}`)
+          }
         }}
       />
     )
