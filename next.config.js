@@ -16,12 +16,23 @@ const nextConfig = {
       bodySizeLimit: '10mb',
     },
   },
-  webpack: (config) => {
+  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
     // Ensure proper module resolution for @ alias
     config.resolve.alias = {
       ...config.resolve.alias,
       '@': path.resolve(__dirname),
     }
+    
+    // Ensure proper extension resolution
+    config.resolve.extensions = [
+      '.js',
+      '.jsx',
+      '.ts',
+      '.tsx',
+      '.json',
+      ...(config.resolve.extensions || []),
+    ]
+    
     return config
   },
 }
