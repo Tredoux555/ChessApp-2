@@ -165,15 +165,34 @@ app.prepare().then(() => {
     })
 
     // Join game room
-    socket.on('join-game', (gameId) => {
+    socket.on('join-game', async (gameId) => {
       socket.join(`game:${gameId}`)
       const userId = connectedUsers.get(socket.id) || 'unknown'
-      console.log(`[JOIN] Socket ${socket.id} (user ${userId}) joined game ${gameId}`)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[JOIN] Socket ${socket.id} (user ${userId}) joined game ${gameId}`)
+      }
       
       // Verify room membership
       const room = io.sockets.adapter.rooms.get(`game:${gameId}`)
       const roomSize = room ? room.size : 0
-      console.log(`[JOIN] Game ${gameId} now has ${roomSize} socket(s)`)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[JOIN] Game ${gameId} now has ${roomSize} socket(s)`)
+      }
+      
+      // Add game to activeGames if it's active (for timer sync)
+      try {
+        const game = await prisma.game.findUnique({
+          where: { id: gameId },
+          select: { status: true }
+        })
+        if (game && game.status === 'active' && !activeGames.has(gameId)) {
+          activeGames.set(gameId, true)
+        }
+      } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error(`Error checking game status for ${gameId}:`, error)
+        }
+      }
     })
 
     // Leave game room
