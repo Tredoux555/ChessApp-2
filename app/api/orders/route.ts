@@ -55,12 +55,35 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Update product quantity
+    // Update product quantity and check if it should be deactivated
+    const newQuantity = product.quantity - quantity
     await prisma.product.update({
       where: { id: product.id },
       data: {
-        quantity: {
-          decrement: quantity,
+        quantity: newQuantity,
+        // If quantity reaches 0, set isActive to false (product disappears)
+        isActive: newQuantity > 0,
+      },
+    })
+
+    // Fetch order with buyer information
+    const orderWithBuyer = await prisma.order.findUnique({
+      where: { id: order.id },
+      include: {
+        buyer: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            profileImage: true,
+          },
+        },
+        product: {
+          select: {
+            id: true,
+            name: true,
+            imageUrl: true,
+          },
         },
       },
     })
@@ -74,6 +97,8 @@ export async function POST(request: NextRequest) {
         totalPrice: order.totalPrice,
         status: order.status,
         createdAt: order.createdAt,
+        buyer: orderWithBuyer?.buyer,
+        product: orderWithBuyer?.product,
       },
     })
   } catch (error: any) {
@@ -109,6 +134,14 @@ export async function GET(request: NextRequest) {
             name: true,
             imageUrl: true,
             price: true,
+          },
+        },
+        buyer: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            profileImage: true,
           },
         },
       },

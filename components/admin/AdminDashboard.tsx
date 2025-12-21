@@ -51,10 +51,11 @@ interface Product {
 
 export default function AdminDashboard() {
   const { user } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'users' | 'messages' | 'products'>('users')
+  const [activeTab, setActiveTab] = useState<'users' | 'messages' | 'products' | 'orders'>('users')
   const [users, setUsers] = useState<User[]>([])
   const [messages, setMessages] = useState<Message[]>([])
   const [products, setProducts] = useState<Product[]>([])
+  const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
   const [showFlaggedOnly, setShowFlaggedOnly] = useState(() => {
@@ -129,6 +130,13 @@ export default function AdminDashboard() {
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()))
   )
+  
+  const filteredOrders = orders.filter(order =>
+    !searchQuery ||
+    order.product?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    order.buyer?.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (order.buyer?.displayName && order.buyer.displayName.toLowerCase().includes(searchQuery.toLowerCase()))
+  )
 
   // Load products
   const loadProducts = async () => {
@@ -148,6 +156,24 @@ export default function AdminDashboard() {
     }
   }
 
+  // Load orders
+  const loadOrders = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/admin/orders')
+      const data = await res.json()
+      if (res.ok) {
+        setOrders(data.orders || [])
+      } else {
+        toast.error(data.error || 'Failed to load orders')
+      }
+    } catch (error) {
+      toast.error('Failed to load orders')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Load data when tab changes
   useEffect(() => {
     if (activeTab === 'users') {
@@ -156,6 +182,8 @@ export default function AdminDashboard() {
       loadMessages()
     } else if (activeTab === 'products') {
       loadProducts()
+    } else if (activeTab === 'orders') {
+      loadOrders()
     }
   }, [activeTab, showFlaggedOnly])
 
@@ -305,6 +333,16 @@ export default function AdminDashboard() {
             }`}
           >
             Products ({filteredProducts.length}/{products.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('orders')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'orders'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            Orders ({filteredOrders.length}/{orders.length})
           </button>
         </nav>
         </div>
@@ -592,6 +630,111 @@ export default function AdminDashboard() {
                   </div>
                 )}
               </>
+            )}
+          </div>
+        )}
+
+        {/* ORDERS TAB */}
+        {activeTab === 'orders' && (
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Order Management
+              </h2>
+              <button
+                onClick={loadOrders}
+                className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-600"
+              >
+                🔄 Refresh
+              </button>
+            </div>
+            
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+              </div>
+            ) : orders.length === 0 ? (
+              <p className="text-center text-gray-500 py-8">No orders found</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b dark:border-gray-700">
+                      <th className="text-left py-3 px-2 text-gray-600 dark:text-gray-400">Order Date</th>
+                      <th className="text-left py-3 px-2 text-gray-600 dark:text-gray-400">Buyer</th>
+                      <th className="text-left py-3 px-2 text-gray-600 dark:text-gray-400">Product</th>
+                      <th className="text-left py-3 px-2 text-gray-600 dark:text-gray-400">Quantity</th>
+                      <th className="text-left py-3 px-2 text-gray-600 dark:text-gray-400">Total Price</th>
+                      <th className="text-left py-3 px-2 text-gray-600 dark:text-gray-400">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredOrders.map((order) => (
+                      <tr key={order.id} className="border-b dark:border-gray-700">
+                        <td className="py-3 px-2 text-gray-600 dark:text-gray-400">
+                          {new Date(order.createdAt).toLocaleString()}
+                        </td>
+                        <td className="py-3 px-2">
+                          <div className="flex items-center gap-2">
+                            {order.buyer?.profileImage ? (
+                              <img 
+                                src={order.buyer.profileImage} 
+                                alt="" 
+                                className="w-8 h-8 rounded-lg object-contain border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" 
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white text-sm">
+                                {order.buyer?.username?.charAt(0).toUpperCase() || '?'}
+                              </div>
+                            )}
+                            <div>
+                              <div className="font-medium text-gray-900 dark:text-white">
+                                {order.buyer?.displayName || order.buyer?.username || 'Unknown'}
+                              </div>
+                              {order.buyer?.displayName && (
+                                <div className="text-xs text-gray-500">{order.buyer.username}</div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-2">
+                          <div className="flex items-center gap-2">
+                            {order.product?.imageUrl ? (
+                              <img 
+                                src={order.product.imageUrl} 
+                                alt={order.product.name} 
+                                className="w-8 h-8 rounded object-cover" 
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                                <span className="text-xs">🛒</span>
+                              </div>
+                            )}
+                            <span className="text-gray-900 dark:text-white">
+                              {order.product?.name || 'Product Deleted'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-2 text-gray-600 dark:text-gray-400">
+                          {order.quantity}
+                        </td>
+                        <td className="py-3 px-2 text-gray-900 dark:text-white font-semibold">
+                          ¥{order.totalPrice.toFixed(2)}
+                        </td>
+                        <td className="py-3 px-2">
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            order.status === 'paid' 
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                              : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                          }`}>
+                            {order.status.toUpperCase()}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         )}
