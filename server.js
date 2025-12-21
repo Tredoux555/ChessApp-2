@@ -38,7 +38,7 @@ app.prepare().then(() => {
   const activeGames = new Map()
   const connectedUsers = new Map() // socketId -> userId
   
-  // Periodic timer sync (every 5 seconds)
+  // Periodic timer sync (every 1 second for accurate sync)
   setInterval(async () => {
     try {
       const activeGameIds = Array.from(activeGames.keys())
@@ -46,15 +46,43 @@ app.prepare().then(() => {
         try {
           const game = await prisma.game.findUnique({
             where: { id: gameId },
-            select: { whiteTimeLeft: true, blackTimeLeft: true, status: true }
+            select: { 
+              whiteTimeLeft: true, 
+              blackTimeLeft: true, 
+              status: true,
+              lastMoveAt: true,
+              fen: true
+            }
           })
           
           if (game && game.status === 'active') {
-            io.to(`game:${gameId}`).emit('timer-sync', {
-              gameId,
-              whiteTimeLeft: game.whiteTimeLeft,
-              blackTimeLeft: game.blackTimeLeft
-            })
+            // Calculate actual time remaining based on lastMoveAt
+            const now = Date.now()
+            const lastMoveTime = game.lastMoveAt ? new Date(game.lastMoveAt).getTime() : now
+            const elapsedSeconds = Math.floor((now - lastMoveTime) / 1000)
+            
+            // Determine whose turn it is from FEN (last character before space)
+            const turnChar = game.fen ? game.fen.split(' ')[1] : 'w'
+            const isWhiteTurn = turnChar === 'w'
+            
+            // Calculate actual times
+            let whiteTime = game.whiteTimeLeft
+            let blackTime = game.blackTimeLeft
+            
+            if (isWhiteTurn && elapsedSeconds > 0) {
+              whiteTime = Math.max(0, game.whiteTimeLeft - elapsedSeconds)
+            } else if (!isWhiteTurn && elapsedSeconds > 0) {
+              blackTime = Math.max(0, game.blackTimeLeft - elapsedSeconds)
+            }
+            
+            // Only sync if times have changed significantly (avoid unnecessary updates)
+            if (Math.abs(whiteTime - game.whiteTimeLeft) > 0 || Math.abs(blackTime - game.blackTimeLeft) > 0) {
+              io.to(`game:${gameId}`).emit('timer-sync', {
+                gameId,
+                whiteTimeLeft: whiteTime,
+                blackTimeLeft: blackTime
+              })
+            }
           } else if (!game) {
             // Game was deleted, remove from activeGames
             activeGames.delete(gameId)
@@ -68,7 +96,7 @@ app.prepare().then(() => {
     } catch (error) {
       console.error('Timer sync error:', error)
     }
-  }, 5000)
+  }, 1000) // Sync every 1 second for better accuracy
 
   io.on('connection', (socket) => {
     console.log('New client connected:', socket.id)

@@ -378,8 +378,25 @@ export default function ChessGame({
 
     const handleTimerSync = (data: SocketTimerSyncData) => {
       if (data.gameId === gameId) {
-        if (data.whiteTimeLeft !== undefined) setWhiteTime(data.whiteTimeLeft)
-        if (data.blackTimeLeft !== undefined) setBlackTime(data.blackTimeLeft)
+        // Only update if the server time is different (to avoid unnecessary re-renders)
+        if (data.whiteTimeLeft !== undefined) {
+          setWhiteTime((prev) => {
+            // Only update if difference is significant (more than 1 second)
+            if (Math.abs(prev - data.whiteTimeLeft!) > 1) {
+              return data.whiteTimeLeft!
+            }
+            return prev
+          })
+        }
+        if (data.blackTimeLeft !== undefined) {
+          setBlackTime((prev) => {
+            // Only update if difference is significant (more than 1 second)
+            if (Math.abs(prev - data.blackTimeLeft!) > 1) {
+              return data.blackTimeLeft!
+            }
+            return prev
+          })
+        }
       }
     }
 
