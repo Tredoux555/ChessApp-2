@@ -18,11 +18,8 @@ export default function Home() {
       if (hasChecked) return
       
       try {
-        // Add timeout to prevent hanging
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => {
-          controller.abort()
-        }, 8000) // 8 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 5000) // Reduced to 5 seconds
 
         const res = await fetch('/api/auth/me', {
           credentials: 'include',
@@ -30,15 +27,12 @@ export default function Home() {
         })
 
         clearTimeout(timeoutId)
-
         if (cancelled) return
 
-        // Handle any response, even if not ok
         let data
         try {
           data = await res.json()
         } catch (e) {
-          // If JSON parsing fails, assume no user
           data = { user: null }
         }
         
@@ -53,10 +47,7 @@ export default function Home() {
         }
       } catch (error: any) {
         if (cancelled) return
-        
-        console.error('Auth check error:', error)
-        
-        // Always redirect to login on error
+        // On error, redirect to login
         setUser(null)
         router.push('/login')
       } finally {
@@ -67,22 +58,21 @@ export default function Home() {
       }
     }
 
-    // Fallback timeout - if still loading after 10 seconds, force redirect
-    const fallbackTimeout = setTimeout(() => {
-      if (!hasChecked) {
-        console.warn('Auth check taking too long, forcing redirect to login')
+    // Single timeout for both auth check and fallback
+    const timeout = setTimeout(() => {
+      if (!hasChecked && !cancelled) {
         setLoading(false)
         setUser(null)
         router.push('/login')
         setHasChecked(true)
       }
-    }, 10000)
+    }, 6000) // 6 second total timeout
 
     checkAuth()
 
     return () => {
       cancelled = true
-      clearTimeout(fallbackTimeout)
+      clearTimeout(timeout)
     }
   }, [setUser, setLoading, router, hasChecked])
 

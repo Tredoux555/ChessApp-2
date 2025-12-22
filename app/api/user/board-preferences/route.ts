@@ -11,16 +11,16 @@ export async function PUT(request: NextRequest) {
 
     // Validate inputs
     const validThemes = ['brown', 'green', 'blue', 'purple', 'wood', 'marble']
-    const validPieceSets = ['default', 'merida', 'alpha', 'tatiana', 'leipzig']
+    const validPieceSets = ['default', 'merida', 'alpha', 'neo_wood', 'neo_plastic']
 
-    if (!validThemes.includes(boardTheme)) {
+    if (boardTheme && !validThemes.includes(boardTheme)) {
       return NextResponse.json(
         { error: 'Invalid board theme' },
         { status: 400 }
       )
     }
 
-    if (!validPieceSets.includes(pieceSet)) {
+    if (pieceSet && !validPieceSets.includes(pieceSet)) {
       return NextResponse.json(
         { error: 'Invalid piece set' },
         { status: 400 }

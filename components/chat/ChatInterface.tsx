@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useAuthStore } from '@/lib/stores/useAuthStore'
 import { useSocketStore } from '@/lib/stores/useSocketStore'
+import toast from 'react-hot-toast'
 
 interface ChatInterfaceProps {
   friendId: string
@@ -15,6 +16,7 @@ export default function ChatInterface({ friendId, friendName }: ChatInterfacePro
   const [messages, setMessages] = useState<any[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  const [pendingMessages, setPendingMessages] = useState<Set<string>>(new Set())
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -38,16 +40,49 @@ export default function ChatInterface({ friendId, friendName }: ChatInterfacePro
   }, [friendId, user])
 
   useEffect(() => {
-    if (socket) {
-      socket.on('new-message', (message: any) => {
-        if (message.senderId === friendId || message.receiverId === friendId) {
-          setMessages((prev) => [...prev, message])
-        }
-      })
+    if (!socket) {
+      console.warn('Socket not connected, messages may not sync in real-time')
+      return
+    }
 
-      return () => {
-        socket.off('new-message')
+    const handleNewMessage = (message: any) => {
+      // Only process messages from/to the friend
+      if (message.senderId !== friendId && message.receiverId !== friendId) {
+        return
       }
+      
+      // If this is a message we sent, ignore it (we already have it from API response)
+      if (message.senderId === user?.id) {
+        return
+      }
+      
+      setMessages((prev) => {
+        // Check if message already exists by ID
+        if (message.id) {
+          const exists = prev.some(m => m.id === message.id)
+          if (exists) return prev
+        }
+        
+        // Check by tempId if no ID
+        if (message.tempId) {
+          const exists = prev.some(m => m.tempId === message.tempId)
+          if (exists) {
+            // Update existing temp message with real data
+            return prev.map(m => 
+              m.tempId === message.tempId ? { ...message, tempId: m.tempId } : m
+            )
+          }
+        }
+        
+        // New message - add it
+        return [...prev, message]
+      })
+    }
+
+    socket.on('new-message', handleNewMessage)
+
+    return () => {
+      socket.off('new-message', handleNewMessage)
     }
   }, [socket, friendId])
 
@@ -59,29 +94,81 @@ export default function ChatInterface({ friendId, friendName }: ChatInterfacePro
     e.preventDefault()
     if (!newMessage.trim() || !user) return
 
+    const messageContent = newMessage.trim()
+    const tempId = `temp-${Date.now()}-${Math.random()}`
+    setNewMessage('')
+
+    // Add pending message immediately with tempId
+    const pendingMsg = {
+      id: tempId,
+      tempId,
+      senderId: user.id,
+      receiverId: friendId,
+      content: messageContent,
+      createdAt: new Date().toISOString(),
+      isPending: true,
+    }
+    setMessages((prev) => [...prev, pendingMsg])
+    setPendingMessages(prev => new Set(prev).add(tempId))
+
     try {
       const res = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           receiverId: friendId,
-          content: newMessage,
+          content: messageContent,
         }),
       })
 
       const data = await res.json()
       if (res.ok) {
-        setMessages((prev) => [...prev, data.message])
-        setNewMessage('')
+        // Replace pending message with real message
+        setMessages((prev) => 
+          prev.map(m => 
+            m.tempId === tempId 
+              ? { ...data.message, tempId } 
+              : m
+          )
+        )
+        setPendingMessages(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(tempId)
+          return newSet
+        })
+        
+        // Emit socket event for real-time delivery with full message data
         if (socket) {
           socket.emit('chat-message', {
             receiverId: friendId,
-            content: newMessage,
+            content: messageContent,
+            messageId: data.message.id,
+            senderId: user.id,
+            createdAt: data.message.createdAt
           })
         }
+      } else {
+        // Remove pending message on error
+        setMessages((prev) => prev.filter(m => m.tempId !== tempId))
+        setPendingMessages(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(tempId)
+          return newSet
+        })
+        toast.error(data.error || 'Failed to send message')
+        setNewMessage(messageContent) // Restore message on error
       }
     } catch (error) {
+      // Remove pending message on error
+      setMessages((prev) => prev.filter(m => m.tempId !== tempId))
+      setPendingMessages(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(tempId)
+        return newSet
+      })
       console.error('Error sending message:', error)
+      toast.error('Failed to send message')
+      setNewMessage(messageContent) // Restore message on error
     }
   }
 

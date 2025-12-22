@@ -99,7 +99,7 @@ export default function UserSearch() {
                   <img
                     src={searchUser.profileImage}
                     alt={searchUser.username}
-                    className="w-10 h-10 rounded-full"
+                    className="w-10 h-10 rounded-lg object-contain border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
                   />
                 ) : (
                   <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">

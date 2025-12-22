@@ -94,13 +94,17 @@ export default function GamePage() {
         if (cancelled) return
 
         console.log('Game fetched successfully:', data.game)
+        if (cancelled) return // Double check before state update
+        
         if (data.game) {
-          setGame(data.game)
+          if (!cancelled) setGame(data.game)
         } else {
-          toast.error('Game data is missing')
-          setTimeout(() => router.push('/dashboard'), 1000)
+          if (!cancelled) {
+            toast.error('Game data is missing')
+            setTimeout(() => router.push('/dashboard'), 1000)
+          }
         }
-        setIsLoading(false)
+        if (!cancelled) setIsLoading(false)
       } catch (error: any) {
         if (cancelled) return
         console.error('Error fetching game:', error)
@@ -131,7 +135,8 @@ export default function GamePage() {
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-400">Loading game...</p>
-          <p className="mt-2 text-sm text-gray-500">Game ID: {params?.id}</p>
+          <p className="mt-2 text-sm text-gray-500">Fetching game data and initializing board</p>
+          <p className="mt-1 text-xs text-gray-400">Game ID: {params?.id}</p>
         </div>
       </div>
     )

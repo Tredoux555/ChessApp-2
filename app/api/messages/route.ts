@@ -132,7 +132,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // If gameId provided, verify user is in game and opponent is friend
+    // Check if receiver is an accepted friend (required for all messages)
+    const friendship = await prisma.friendship.findFirst({
+      where: {
+        status: 'accepted',
+        OR: [
+          { senderId: session.id, receiverId },
+          { senderId: receiverId, receiverId: session.id }
+        ]
+      }
+    })
+
+    if (!friendship) {
+      return NextResponse.json(
+        { error: 'Can only chat with accepted friends' },
+        { status: 403 }
+      )
+    }
+
+    // If gameId provided, verify user is in game
     if (gameId) {
       const game = await prisma.game.findUnique({
         where: { id: gameId }
@@ -145,24 +163,6 @@ export async function POST(request: NextRequest) {
       // Check if user is a player
       if (game.whitePlayerId !== session.id && game.blackPlayerId !== session.id) {
         return NextResponse.json({ error: 'Not a player in this game' }, { status: 403 })
-      }
-
-      // Check if opponent is friend
-      const friendship = await prisma.friendship.findFirst({
-        where: {
-          status: 'accepted',
-          OR: [
-            { senderId: session.id, receiverId },
-            { senderId: receiverId, receiverId: session.id }
-          ]
-        }
-      })
-
-      if (!friendship) {
-        return NextResponse.json(
-          { error: 'Can only chat with accepted friends' },
-          { status: 403 }
-        )
       }
     }
 

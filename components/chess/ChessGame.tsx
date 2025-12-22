@@ -1,7 +1,7 @@
 // components/chess/ChessGame.tsx
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Chessboard } from 'react-chessboard'
 import { Chess } from 'chess.js'
 import { useSocketStore } from '@/lib/stores/useSocketStore'
@@ -13,17 +13,53 @@ import GameInfo from './GameInfo'
 import GameChatBox from './GameChatBox'
 import QuitGameModal from './QuitGameModal'
 
+interface Player {
+  id: string
+  username: string
+  displayName: string | null
+  profileImage: string | null
+}
+
 interface ChessGameProps {
   gameId: string
   initialFen: string
   initialPgn: string
-  whitePlayer: any
-  blackPlayer: any
+  whitePlayer: Player
+  blackPlayer: Player
   timeControl: number
   whiteTimeLeft: number
   blackTimeLeft: number
   status: string
   result?: string | null
+}
+
+interface SocketMoveData {
+  gameId: string
+  fen: string
+  pgn: string
+  whiteTimeLeft: number
+  blackTimeLeft: number
+  move?: { from: string; to: string }
+}
+
+interface SocketGameUpdateData {
+  gameId: string
+  status: string
+  result?: string
+  fen?: string
+  whiteTimeLeft?: number
+  blackTimeLeft?: number
+}
+
+interface SocketTimerSyncData {
+  gameId: string
+  whiteTimeLeft?: number
+  blackTimeLeft?: number
+}
+
+interface SocketQuitData {
+  gameId: string
+  resignedPlayerId?: string
 }
 
 // FEATURE 3: Board theme colors
@@ -85,33 +121,33 @@ const PIECE_SETS = {
     bQ: 'https://images.chesscomfiles.com/chess-themes/pieces/alpha/150/bq.png',
     bK: 'https://images.chesscomfiles.com/chess-themes/pieces/alpha/150/bk.png'
   },
-  tatiana: {
-    wP: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/wp.png',
-    wN: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/wn.png',
-    wB: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/wb.png',
-    wR: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/wr.png',
-    wQ: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/wq.png',
-    wK: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/wk.png',
-    bP: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/bp.png',
-    bN: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/bn.png',
-    bB: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/bb.png',
-    bR: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/br.png',
-    bQ: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/bq.png',
-    bK: 'https://images.chesscomfiles.com/chess-themes/pieces/tatiana/150/bk.png'
+  neo_wood: {
+    wP: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/wp.png',
+    wN: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/wn.png',
+    wB: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/wb.png',
+    wR: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/wr.png',
+    wQ: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/wq.png',
+    wK: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/wk.png',
+    bP: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/bp.png',
+    bN: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/bn.png',
+    bB: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/bb.png',
+    bR: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/br.png',
+    bQ: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/bq.png',
+    bK: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_wood/150/bk.png'
   },
-  leipzig: {
-    wP: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/wp.png',
-    wN: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/wn.png',
-    wB: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/wb.png',
-    wR: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/wr.png',
-    wQ: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/wq.png',
-    wK: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/wk.png',
-    bP: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/bp.png',
-    bN: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/bn.png',
-    bB: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/bb.png',
-    bR: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/br.png',
-    bQ: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/bq.png',
-    bK: 'https://images.chesscomfiles.com/chess-themes/pieces/leipzig/150/bk.png'
+  neo_plastic: {
+    wP: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/wp.png',
+    wN: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/wn.png',
+    wB: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/wb.png',
+    wR: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/wr.png',
+    wQ: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/wq.png',
+    wK: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/wk.png',
+    bP: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/bp.png',
+    bN: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/bn.png',
+    bB: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/bb.png',
+    bR: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/br.png',
+    bQ: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/bq.png',
+    bK: 'https://images.chesscomfiles.com/chess-themes/pieces/neo_plastic/150/bk.png'
   }
 }
 
@@ -155,47 +191,42 @@ export default function ChessGame({
   const currentTurn = game.turn() // 'w' or 'b'
   const isMyTurn = (isPlayerWhite && currentTurn === 'w') || (isPlayerBlack && currentTurn === 'b')
 
-  // FEATURE 3: Load user's board preferences
-  useEffect(() => {
-    if (user) {
-      loadPreferences(user.id)
-    }
-  }, [user, loadPreferences])
-
-  // TIMER COUNTDOWN - Decrement every second for the active player
-  useEffect(() => {
-    // Only run timer if game is active
-    if (status !== 'active') return
+  // Handle game end (checkmate, stalemate, draw) - useCallback to fix dependencies
+  // MUST be defined before any useEffects that use it
+  const handleGameEnd = useCallback(async (result: string) => {
+    setStatus('completed')
+    setResult(result)
     
-    const timer = setInterval(() => {
-      if (currentTurn === 'w') {
-        setWhiteTime((prev) => {
-          if (prev <= 1) {
-            // White ran out of time - black wins
-            clearInterval(timer)
-            handleTimeout('white')
-            return 0
-          }
-          return prev - 1
+    socket?.emit('game-update', {
+      gameId,
+      status: 'completed',
+      result
+    })
+    
+    try {
+      await fetch(`/api/games/${gameId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'checkmate',
+          data: { winner: result }
         })
-      } else {
-        setBlackTime((prev) => {
-          if (prev <= 1) {
-            // Black ran out of time - white wins
-            clearInterval(timer)
-            handleTimeout('black')
-            return 0
-          }
-          return prev - 1
-        })
+      })
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to save game end:', error)
       }
-    }, 1000)
+    }
+    
+    if (result === 'draw') {
+      toast.success('Game ended in a draw!')
+    } else {
+      toast.success('Checkmate!')
+    }
+  }, [socket, gameId])
 
-    return () => clearInterval(timer)
-  }, [status, currentTurn])
-
-  // Handle timeout (flag)
-  const handleTimeout = async (loser: 'white' | 'black') => {
+  // Handle timeout (flag) - useCallback to fix dependencies
+  const handleTimeout = useCallback(async (loser: 'white' | 'black') => {
     const winner = loser === 'white' ? 'black_wins' : 'white_wins'
     setStatus('completed')
     setResult(winner)
@@ -218,11 +249,57 @@ export default function ChessGame({
         })
       })
     } catch (error) {
-      console.error('Failed to save timeout result:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to save timeout result:', error)
+      }
     }
     
     toast.error(`${loser === 'white' ? 'White' : 'Black'} ran out of time!`)
-  }
+  }, [socket, gameId])
+
+  // FEATURE 3: Load user's board preferences
+  useEffect(() => {
+    if (user) {
+      loadPreferences(user.id)
+    }
+  }, [user, loadPreferences])
+
+  // TIMER COUNTDOWN - Decrement every second for the active player
+  useEffect(() => {
+    // Only run timer if game is active
+    if (status !== 'active') return
+    
+    const timer = setInterval(() => {
+      // Use functional update to read current game state
+      setGame((prevGame) => {
+        const currentTurn = prevGame.turn()
+        
+        if (currentTurn === 'w') {
+          setWhiteTime((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer)
+              handleTimeout('white')
+              return 0
+            }
+            return prev - 1
+          })
+        } else {
+          setBlackTime((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer)
+              handleTimeout('black')
+              return 0
+            }
+            return prev - 1
+          })
+        }
+        
+        return prevGame
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [status, handleTimeout])
 
   // FEATURE 1: Extract last move from PGN when game updates
   useEffect(() => {
@@ -243,7 +320,9 @@ export default function ChessGame({
           }
         }
       } catch (error) {
-        console.error('Error parsing last move:', error)
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error parsing last move:', error)
+        }
       }
     }
   }, [pgn])
@@ -254,8 +333,14 @@ export default function ChessGame({
 
     socket.emit('join-game', gameId)
 
-    socket.on('move-made', (data: any) => {
+    const handleMoveMade = (data: SocketMoveData) => {
       if (data.gameId === gameId) {
+        // Check if this is an opponent move by comparing FEN turn
+        const currentFenTurn = fen.split(' ')[1] // Current turn from existing FEN
+        const newFenTurn = data.fen.split(' ')[1] // Turn from new FEN
+        const isOpponentMove = currentFenTurn !== newFenTurn
+        
+        // Always update the game state from server (source of truth)
         const newGame = new Chess(data.fen)
         setGame(newGame)
         setFen(data.fen)
@@ -268,11 +353,22 @@ export default function ChessGame({
           setLastMove({ from: data.move.from, to: data.move.to })
         }
         
-        toast('Opponent made a move!', { icon: '♟️' })
+        // Only show toast and check game end for opponent moves
+        if (isOpponentMove) {
+          // Check for game end conditions after opponent's move
+          if (newGame.isCheckmate()) {
+            const winner = newGame.turn() === 'w' ? 'black_wins' : 'white_wins'
+            handleGameEnd(winner)
+          } else if (newGame.isStalemate() || newGame.isDraw() || newGame.isThreefoldRepetition()) {
+            handleGameEnd('draw')
+          } else {
+            toast('Opponent made a move!', { icon: '♟️' })
+          }
+        }
       }
-    })
+    }
 
-    socket.on('game-updated', (data: any) => {
+    const handleGameUpdated = (data: SocketGameUpdateData) => {
       if (data.gameId === gameId) {
         setStatus(data.status)
         setResult(data.result)
@@ -280,44 +376,102 @@ export default function ChessGame({
           const newGame = new Chess(data.fen)
           setGame(newGame)
           setFen(data.fen)
+          
+          // Check for game end conditions after game update
+          if (newGame.isCheckmate()) {
+            const winner = newGame.turn() === 'w' ? 'black_wins' : 'white_wins'
+            handleGameEnd(winner)
+          } else if (newGame.isStalemate() || newGame.isDraw() || newGame.isThreefoldRepetition()) {
+            handleGameEnd('draw')
+          }
+        }
+        // Sync timer when game updates
+        if (data.whiteTimeLeft !== undefined) setWhiteTime(data.whiteTimeLeft)
+        if (data.blackTimeLeft !== undefined) setBlackTime(data.blackTimeLeft)
+      }
+    }
+
+    const handleTimerSync = (data: SocketTimerSyncData) => {
+      if (data.gameId === gameId) {
+        // Always sync with server (server is source of truth)
+        // This ensures perfect synchronization between players
+        if (data.whiteTimeLeft !== undefined) {
+          setWhiteTime(data.whiteTimeLeft)
+        }
+        if (data.blackTimeLeft !== undefined) {
+          setBlackTime(data.blackTimeLeft)
         }
       }
-    })
+    }
 
-    // FEATURE 7: Quit game socket events
-    socket.on('game-quit-initiated', (data: any) => {
+    const handleQuitInitiated = (data: SocketQuitData) => {
       if (data.gameId === gameId) {
         toast('Opponent left the game. Waiting for return... (30 seconds)', {
           icon: '⏱️',
           duration: 5000
         })
       }
-    })
+    }
 
-    socket.on('game-quit-timeout', (data: any) => {
+    const handleQuitTimeout = (data: SocketQuitData) => {
       if (data.gameId === gameId) {
         setStatus('resigned')
         setResult(data.resignedPlayerId === whitePlayer.id ? 'black_wins' : 'white_wins')
         toast.success('Opponent did not return. You win!')
       }
-    })
+    }
 
-    socket.on('game-quit-returned', (data: any) => {
+    const handleQuitReturned = (data: SocketQuitData) => {
       if (data.gameId === gameId) {
         setStatus('active')
         toast.success('Opponent returned to the game')
       }
-    })
+    }
+
+    const handlePlayerResigned = (data: any) => {
+      if (data.gameId === gameId) {
+        setStatus('completed')
+        setResult(data.winner)
+        const resignedPlayer = data.resignedPlayerId === whitePlayer.id ? whitePlayer : blackPlayer
+        toast.success(`${resignedPlayer.displayName || resignedPlayer.username} has resigned. You win!`)
+      }
+    }
+
+    const handleReconnect = () => {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Socket reconnected, re-attaching game listeners')
+      }
+      socket.emit('join-game', gameId)
+      socket.on('move-made', handleMoveMade)
+      socket.on('game-updated', handleGameUpdated)
+      socket.on('timer-sync', handleTimerSync)
+      socket.on('game-quit-initiated', handleQuitInitiated)
+      socket.on('game-quit-timeout', handleQuitTimeout)
+      socket.on('game-quit-returned', handleQuitReturned)
+      socket.on('player-resigned', handlePlayerResigned)
+    }
+
+    socket.on('move-made', handleMoveMade)
+    socket.on('game-updated', handleGameUpdated)
+    socket.on('timer-sync', handleTimerSync)
+    socket.on('game-quit-initiated', handleQuitInitiated)
+    socket.on('game-quit-timeout', handleQuitTimeout)
+    socket.on('game-quit-returned', handleQuitReturned)
+    socket.on('player-resigned', handlePlayerResigned)
+    socket.on('reconnect', handleReconnect)
 
     return () => {
-      socket.off('move-made')
-      socket.off('game-updated')
-      socket.off('game-quit-initiated')
-      socket.off('game-quit-timeout')
-      socket.off('game-quit-returned')
+      socket.off('move-made', handleMoveMade)
+      socket.off('game-updated', handleGameUpdated)
+      socket.off('timer-sync', handleTimerSync)
+      socket.off('game-quit-initiated', handleQuitInitiated)
+      socket.off('game-quit-timeout', handleQuitTimeout)
+      socket.off('game-quit-returned', handleQuitReturned)
+      socket.off('player-resigned', handlePlayerResigned)
+      socket.off('reconnect', handleReconnect)
       socket.emit('leave-game', gameId)
     }
-  }, [socket, gameId, whitePlayer.id])
+  }, [socket, gameId, whitePlayer.id, handleGameEnd])
 
   // FEATURE 7: Quit timer countdown
   useEffect(() => {
@@ -339,28 +493,46 @@ export default function ChessGame({
     }
 
     if (!socket || !socket.connected) {
-      console.error('Socket not connected, cannot make move')
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Socket not connected, cannot make move')
+      }
       toast.error('Connection lost. Please refresh the page.')
       return false
     }
 
     try {
-      const move = game.move({
+      // Create new game instance BEFORE making the move to avoid mutation issues
+      const newGame = new Chess(game.fen())
+      const move = newGame.move({
         from: sourceSquare,
         to: targetSquare,
         promotion: 'q' // Always promote to queen for simplicity
       })
 
       if (move === null) return false
+      
+      const newFen = newGame.fen()
+      const newPgn = newGame.pgn()
 
-      const newFen = game.fen()
-      const newPgn = game.pgn()
-
+      // Update all game state
+      setGame(newGame)
       setFen(newFen)
       setPgn(newPgn)
       
       // FEATURE 1: Update last move
       setLastMove({ from: sourceSquare, to: targetSquare })
+
+      // Check for game end conditions
+      if (newGame.isCheckmate()) {
+        const winner = newGame.turn() === 'w' ? 'black_wins' : 'white_wins'
+        handleGameEnd(winner)
+        return true
+      }
+      
+      if (newGame.isStalemate() || newGame.isDraw() || newGame.isThreefoldRepetition()) {
+        handleGameEnd('draw')
+        return true
+      }
 
       // Use current timer values (already being decremented by the timer useEffect)
       const currentWhiteTime = whiteTime
@@ -391,13 +563,17 @@ export default function ChessGame({
           }
         })
       }).catch(error => {
-        console.error('Failed to save move to server:', error)
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to save move to server:', error)
+        }
         toast.error('Failed to save move. Please refresh.')
       })
 
       return true
     } catch (error) {
-      console.error('Move error:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Move error:', error)
+      }
       return false
     }
   }
@@ -414,10 +590,21 @@ export default function ChessGame({
         method: 'POST'
       })
       
+      // Update game via API first
+      await fetch(`/api/games/${gameId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'resign',
+        }),
+      })
+      
+      // Then emit socket event to notify opponent
       socket?.emit('resign', {
         gameId,
         playerId: user?.id,
-        winner: isPlayerWhite ? 'black_wins' : 'white_wins'
+        winner: isPlayerWhite ? 'black_wins' : 'white_wins',
+        resignedPlayerId: user?.id
       })
       
       toast.success('You have resigned from the game')
@@ -426,7 +613,9 @@ export default function ChessGame({
       // Navigate to dashboard
       window.location.href = '/dashboard'
     } catch (error) {
-      console.error('Failed to resign:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to resign:', error)
+      }
       toast.error('Failed to resign')
     }
   }
@@ -455,7 +644,9 @@ export default function ChessGame({
         })
       }
     } catch (error) {
-      console.error('Failed to initiate quit:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to initiate quit:', error)
+      }
       toast.error('Failed to quit game')
     }
   }
@@ -479,7 +670,9 @@ export default function ChessGame({
         toast.success('Returned to game')
       }
     } catch (error) {
-      console.error('Failed to return to game:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to return to game:', error)
+      }
       toast.error('Failed to return to game')
     }
   }
@@ -498,7 +691,9 @@ export default function ChessGame({
       setShowQuitModal(false)
       window.location.href = '/dashboard'
     } catch (error) {
-      console.error('Failed to confirm quit:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to confirm quit:', error)
+      }
     }
   }
 
@@ -525,6 +720,12 @@ export default function ChessGame({
         src={pieceSetData[piece as keyof typeof pieceSetData]}
         alt={piece}
         style={{ width: squareWidth, height: squareWidth }}
+        onError={(e) => {
+          // If image fails, try to load from a working set as last resort
+          if (process.env.NODE_ENV === 'development') {
+            console.warn(`Failed to load piece image: ${pieceSetData[piece as keyof typeof pieceSetData]}`)
+          }
+        }}
       />
     )
     return acc
@@ -551,6 +752,17 @@ export default function ChessGame({
       </div>
 
       <div className="lg:w-96 space-y-4">
+        {status === 'pending' && (
+          <div className="bg-yellow-100 dark:bg-yellow-900 border-2 border-yellow-400 rounded-lg p-4 text-center">
+            <p className="text-yellow-800 dark:text-yellow-200 font-semibold text-lg">
+              ⏳ Waiting for opponent to accept...
+            </p>
+            <p className="text-yellow-700 dark:text-yellow-300 text-sm mt-2">
+              The game will start once your opponent accepts the challenge.
+            </p>
+          </div>
+        )}
+        
         <GameInfo
           whitePlayer={whitePlayer}
           blackPlayer={blackPlayer}

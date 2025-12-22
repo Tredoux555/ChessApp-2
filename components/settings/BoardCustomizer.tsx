@@ -18,8 +18,8 @@ const PIECE_SETS = [
   { id: 'default', name: 'Default', urlPrefix: 'neo' },
   { id: 'merida', name: 'Merida', urlPrefix: 'neo' },
   { id: 'alpha', name: 'Alpha', urlPrefix: 'alpha' },
-  { id: 'tatiana', name: 'Tatiana', urlPrefix: 'tatiana' },
-  { id: 'leipzig', name: 'Leipzig', urlPrefix: 'leipzig' }
+  { id: 'neo_wood', name: 'Wood', urlPrefix: 'neo_wood' },
+  { id: 'neo_plastic', name: 'Plastic', urlPrefix: 'neo_plastic' }
 ]
 
 // Helper function to get piece image URL
@@ -44,6 +44,7 @@ const INITIAL_PIECES: { [key: number]: string } = {
 export default function BoardCustomizer() {
   const { boardTheme, pieceSet, setBoardTheme, setPieceSet, savePreferences } = useBoardStore()
   const [isSaving, setIsSaving] = useState(false)
+  const [previewKey, setPreviewKey] = useState(0) // Force preview re-render
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -103,43 +104,62 @@ export default function BoardCustomizer() {
           Piece Set
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {PIECE_SETS.map((set) => (
+          {PIECE_SETS.map((set) => {
+            return (
             <button
               key={set.id}
               onClick={() => setPieceSet(set.id)}
-              className={`p-4 rounded-lg border-2 transition ${
+              className={`p-4 rounded-lg border-2 transition min-h-[120px] ${
                 pieceSet === set.id
                   ? 'border-blue-500 ring-2 ring-blue-300'
                   : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
               }`}
             >
-              <div className="flex justify-center gap-1 mb-2">
+              <div className="flex justify-center gap-1 mb-2 min-h-[40px] items-center">
                 <img 
                   src={getPieceUrl(set.id, 'wk')} 
                   alt="White King" 
-                  className="w-10 h-10"
+                  className="w-10 h-10 object-contain"
+                  onError={(e) => {
+                    const img = e.target as HTMLImageElement
+                    img.src = 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wk.png'
+                    setPreviewKey(prev => prev + 1) // Force preview update
+                  }}
                 />
                 <img 
                   src={getPieceUrl(set.id, 'wq')} 
                   alt="White Queen" 
-                  className="w-10 h-10"
+                  className="w-10 h-10 object-contain"
+                  onError={(e) => {
+                    const img = e.target as HTMLImageElement
+                    img.src = 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/wq.png'
+                  }}
                 />
                 <img 
                   src={getPieceUrl(set.id, 'bk')} 
                   alt="Black King" 
-                  className="w-10 h-10"
+                  className="w-10 h-10 object-contain"
+                  onError={(e) => {
+                    const img = e.target as HTMLImageElement
+                    img.src = 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bk.png'
+                  }}
                 />
                 <img 
                   src={getPieceUrl(set.id, 'bq')} 
                   alt="Black Queen" 
-                  className="w-10 h-10"
+                  className="w-10 h-10 object-contain"
+                  onError={(e) => {
+                    const img = e.target as HTMLImageElement
+                    img.src = 'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/bq.png'
+                  }}
                 />
               </div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
+              <p className="text-sm font-medium text-gray-900 dark:text-white text-center mt-1">
                 {set.name}
               </p>
             </button>
-          ))}
+            )
+          })}
         </div>
       </div>
 
@@ -161,16 +181,23 @@ export default function BoardCustomizer() {
               return (
                 <div
                   key={i}
-                  className="w-10 h-10 flex items-center justify-center"
+                  className="w-10 h-10 flex items-center justify-center relative"
                   style={{ backgroundColor: bgColor }}
                 >
-                  {piece && (
+                  {piece ? (
                     <img 
-                      src={getPieceUrl(pieceSet, piece)} 
+                      src={getPieceUrl(pieceSet || 'merida', piece)} 
                       alt={piece}
-                      className="w-9 h-9"
+                      className="w-full h-full object-contain p-0.5"
+                      onError={(e) => {
+                        // Fallback to neo pieces if the selected set fails
+                        const fallbackUrl = `https://images.chesscomfiles.com/chess-themes/pieces/neo/150/${piece}.png`
+                        if ((e.target as HTMLImageElement).src !== fallbackUrl) {
+                          (e.target as HTMLImageElement).src = fallbackUrl
+                        }
+                      }}
                     />
-                  )}
+                  ) : null}
                 </div>
               )
             })}

@@ -1,3 +1,4 @@
+// Socket hook for real-time communication
 'use client'
 
 import { useEffect } from 'react'
@@ -40,6 +41,16 @@ export function useSocket() {
     socketInstance.on('connect_error', (error) => {
       console.error('Socket connection error:', error)
       setConnected(false)
+      // Show user-friendly error message after multiple failed attempts
+      // Track reconnection attempts manually
+      let reconnectCount = 0
+      socketInstance.io.on('reconnect_attempt', () => {
+        reconnectCount++
+        if (reconnectCount >= 3) {
+          // Only show error after 3+ failed attempts to avoid spam
+          console.warn('Socket connection failed multiple times. Please check your connection.')
+        }
+      })
     })
 
     setSocket(socketInstance)

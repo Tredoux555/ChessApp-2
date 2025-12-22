@@ -1,5 +1,6 @@
 'use client'
 
+// Chat layout with navigation
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/stores/useAuthStore'

@@ -103,11 +103,39 @@ export default function NotificationListener() {
   }, [socket, user, router])
 
   const handleAccept = async () => {
-    if (!activeChallenge) return
+    if (!activeChallenge || !socket) return
     
-    // Navigate directly to game (game is already active)
-    router.push(`/game/${activeChallenge.gameId}`)
-    setActiveChallenge(null)
+    try {
+      // Accept the challenge via API
+      const res = await fetch(`/api/games/${activeChallenge.gameId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'accept-challenge',
+        }),
+      })
+
+      if (res.ok) {
+        // Notify the challenger that their challenge was accepted
+        socket.emit('challenge-accepted', {
+          gameId: activeChallenge.gameId,
+          challengerId: activeChallenge.challenger.id,
+        })
+        
+        // Navigate to game (now active)
+        router.push(`/game/${activeChallenge.gameId}`)
+        setActiveChallenge(null)
+        toast.success('Challenge accepted! Game starting...')
+      } else {
+        const error = await res.json()
+        toast.error(error.error || 'Failed to accept challenge')
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Accept challenge error:', error)
+      }
+      toast.error('An error occurred')
+    }
   }
 
   const handleDecline = async () => {
@@ -133,7 +161,9 @@ export default function NotificationListener() {
         toast.error('Failed to decline challenge')
       }
     } catch (error) {
-      console.error('Decline challenge error:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Decline challenge error:', error)
+      }
       toast.error('An error occurred')
     }
 

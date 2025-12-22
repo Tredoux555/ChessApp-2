@@ -35,19 +35,16 @@ export default function GameChatBox({
   const { user } = useAuthStore()
   const { friends } = useFriendsStore()
 
-  // Check if opponent is a friend
+  // For in-game chat, allow chatting regardless of friendship status
+  // Players in a game together should be able to chat
   useEffect(() => {
-    const friendCheck = friends.some(f => f.id === opponentId)
-    setIsFriend(friendCheck)
-  }, [friends, opponentId])
+    // Always allow chat in-game (players are in the same game)
+    setIsFriend(true)
+  }, [])
 
   // Load messages
   useEffect(() => {
     const loadMessages = async () => {
-      if (!isFriend) {
-        setIsLoading(false)
-        return
-      }
 
       try {
         const response = await fetch(`/api/messages?gameId=${gameId}`)
@@ -63,11 +60,11 @@ export default function GameChatBox({
     }
 
     loadMessages()
-  }, [gameId, isFriend])
+  }, [gameId])
 
   // Socket listener for new messages
   useEffect(() => {
-    if (!socket || !isFriend) return
+    if (!socket) return
 
     socket.on('game-chat-message', (data: any) => {
       if (data.gameId === gameId) {
@@ -78,7 +75,7 @@ export default function GameChatBox({
     return () => {
       socket.off('game-chat-message')
     }
-  }, [socket, gameId, isFriend])
+  }, [socket, gameId])
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -88,7 +85,7 @@ export default function GameChatBox({
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!newMessage.trim() || !isFriend) return
+    if (!newMessage.trim()) return
 
     try {
       const response = await fetch('/api/messages', {
@@ -129,18 +126,6 @@ export default function GameChatBox({
     )
   }
 
-  if (!isFriend) {
-    return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-          Game Chat
-        </h3>
-        <p className="text-gray-600 dark:text-gray-400 text-sm text-center py-4">
-          You can only chat with accepted friends
-        </p>
-      </div>
-    )
-  }
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex flex-col h-96">
@@ -197,5 +182,6 @@ export default function GameChatBox({
     </div>
   )
 }
+
 
 

@@ -1,8 +1,10 @@
+// Header component with navigation
 'use client'
 
 import Link from 'next/link'
 import { useTheme } from 'next-themes'
 import { useAuthStore } from '@/lib/stores/useAuthStore'
+import { useSocketStore } from '@/lib/stores/useSocketStore'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { useEffect, useState } from 'react'
@@ -11,6 +13,7 @@ export default function Header() {
   const [mounted, setMounted] = useState(false)
   const { theme, setTheme } = useTheme()
   const { user, logout } = useAuthStore()
+  const { isConnected } = useSocketStore()
   const router = useRouter()
 
   useEffect(() => {
@@ -62,6 +65,14 @@ export default function Header() {
             )}
           </div>
 
+          {/* Connection Status */}
+          <div className="flex items-center space-x-2" title={isConnected ? 'Connected' : 'Disconnected'}>
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+            <span className="text-xs text-gray-500 dark:text-gray-400 hidden md:inline">
+              {isConnected ? 'Online' : 'Offline'}
+            </span>
+          </div>
+
           {/* Theme Toggle */}
           {mounted && (
             <button
@@ -78,10 +89,10 @@ export default function Header() {
               <img
                 src={user.profileImage}
                 alt={user.username}
-                className="w-10 h-10 rounded-full"
+                className="w-10 h-10 rounded-lg object-contain border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+              <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold">
                 {user?.username.charAt(0).toUpperCase()}
               </div>
             )}

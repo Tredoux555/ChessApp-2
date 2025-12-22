@@ -2,9 +2,40 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyPassword, createSession } from '@/lib/auth'
 
+// Simple in-memory rate limiter (for production, use Redis or similar)
+const loginAttempts = new Map<string, { count: number; resetAt: number }>()
+
+function checkRateLimit(identifier: string, maxAttempts: number = 5, windowMs: number = 15 * 60 * 1000): boolean {
+  const now = Date.now()
+  const record = loginAttempts.get(identifier)
+  
+  if (!record || now > record.resetAt) {
+    loginAttempts.set(identifier, { count: 1, resetAt: now + windowMs })
+    return true
+  }
+  
+  if (record.count >= maxAttempts) {
+    return false
+  }
+  
+  record.count++
+  return true
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { username, password } = await request.json()
+    
+    // Rate limiting - use IP address or username as identifier
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+    const identifier = `${ip}-${username?.toLowerCase() || 'unknown'}`
+    
+    if (!checkRateLimit(identifier)) {
+      return NextResponse.json(
+        { error: 'Too many login attempts. Please try again in 15 minutes.' },
+        { status: 429 }
+      )
+    }
 
     if (!username || !password) {
       return NextResponse.json(
@@ -51,11 +82,15 @@ export async function POST(request: NextRequest) {
     // Verify password
     const isValid = await verifyPassword(password, user.password)
     if (!isValid) {
+      // Don't increment rate limit on invalid password (already incremented)
       return NextResponse.json(
         { error: 'Invalid username or password' },
         { status: 401 }
       )
     }
+    
+    // Clear rate limit on successful login
+    loginAttempts.delete(identifier)
 
     // Create session
     await createSession(user.id)

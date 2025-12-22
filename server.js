@@ -18,7 +18,9 @@ app.prepare().then(() => {
       const parsedUrl = parse(req.url, true)
       await handle(req, res, parsedUrl)
     } catch (err) {
-      console.error('Error occurred handling', req.url, err)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error occurred handling', req.url, err)
+      }
       res.statusCode = 500
       res.end('internal server error')
     }
@@ -37,18 +39,115 @@ app.prepare().then(() => {
   // Store active games and their timers
   const activeGames = new Map()
   const connectedUsers = new Map() // socketId -> userId
+  
+  // Periodic timer sync (every 1 second for accurate sync)
+  setInterval(async () => {
+    try {
+      const activeGameIds = Array.from(activeGames.keys())
+      for (const gameId of activeGameIds) {
+        try {
+          const game = await prisma.game.findUnique({
+            where: { id: gameId },
+            select: { 
+              whiteTimeLeft: true, 
+              blackTimeLeft: true, 
+              status: true,
+              lastMoveAt: true,
+              fen: true
+            }
+          })
+          
+          if (game && game.status === 'active') {
+            // Calculate actual time remaining based on lastMoveAt
+            const now = Date.now()
+            const lastMoveTime = game.lastMoveAt ? new Date(game.lastMoveAt).getTime() : now
+            const elapsedSeconds = Math.floor((now - lastMoveTime) / 1000)
+            
+            // Determine whose turn it is from FEN (last character before space)
+            const turnChar = game.fen ? game.fen.split(' ')[1] : 'w'
+            const isWhiteTurn = turnChar === 'w'
+            
+            // Calculate actual times
+            let whiteTime = game.whiteTimeLeft
+            let blackTime = game.blackTimeLeft
+            
+            if (isWhiteTurn && elapsedSeconds > 0) {
+              whiteTime = Math.max(0, game.whiteTimeLeft - elapsedSeconds)
+            } else if (!isWhiteTurn && elapsedSeconds > 0) {
+              blackTime = Math.max(0, game.blackTimeLeft - elapsedSeconds)
+            }
+            
+            // Always sync timer (server is source of truth)
+            // This ensures perfect synchronization between players
+            io.to(`game:${gameId}`).emit('timer-sync', {
+              gameId,
+              whiteTimeLeft: whiteTime,
+              blackTimeLeft: blackTime
+            })
+          } else if (!game) {
+            // Game was deleted, remove from activeGames
+            activeGames.delete(gameId)
+          }
+        } catch (gameError) {
+          if (process.env.NODE_ENV === 'development') {
+            console.error(`Timer sync error for game ${gameId}:`, gameError)
+          }
+          // Remove problematic game from activeGames
+          activeGames.delete(gameId)
+        }
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Timer sync error:', error)
+      }
+    }
+  }, 1000) // Sync every 1 second for better accuracy
 
   io.on('connection', (socket) => {
-    console.log('New client connected:', socket.id)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('New client connected:', socket.id)
+    }
 
     // User authentication
     socket.on('authenticate', async (data) => {
       const userId = typeof data === 'string' ? data : data?.userId
       if (userId) {
+        // Verify user exists and is not banned/suspended
+        try {
+          const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, isBanned: true, isSuspended: true }
+          })
+          
+          if (!user || user.isBanned) {
+            if (process.env.NODE_ENV === 'development') {
+              console.warn(`Invalid or banned user attempted socket auth: ${userId}`)
+            }
+            socket.disconnect()
+            return
+          }
+          
+          if (user.isSuspended) {
+            if (process.env.NODE_ENV === 'development') {
+              console.warn(`Suspended user attempted socket auth: ${userId}`)
+            }
+            socket.disconnect()
+            return
+          }
+        } catch (error) {
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Socket auth verification error:', error)
+          }
+          socket.disconnect()
+          return
+        }
+        
         connectedUsers.set(socket.id, userId)
         socket.data.userId = userId
         socket.join(`user:${userId}`)
-        console.log(`User ${userId} authenticated on socket ${socket.id}`)
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`User ${userId} authenticated on socket ${socket.id}`)
+        }
         
         // Mark user online
         try {
@@ -76,54 +175,84 @@ app.prepare().then(() => {
             io.to(`user:${friendId}`).emit('user-online', { userId })
           })
         } catch (error) {
-          console.error('Authenticate error:', error)
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Authenticate error:', error)
+          }
         }
       }
     })
 
     // Join game room
-    socket.on('join-game', (gameId) => {
+    socket.on('join-game', async (gameId) => {
       socket.join(`game:${gameId}`)
       const userId = connectedUsers.get(socket.id) || 'unknown'
-      console.log(`[JOIN] Socket ${socket.id} (user ${userId}) joined game ${gameId}`)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[JOIN] Socket ${socket.id} (user ${userId}) joined game ${gameId}`)
+      }
       
       // Verify room membership
       const room = io.sockets.adapter.rooms.get(`game:${gameId}`)
       const roomSize = room ? room.size : 0
-      console.log(`[JOIN] Game ${gameId} now has ${roomSize} socket(s)`)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[JOIN] Game ${gameId} now has ${roomSize} socket(s)`)
+      }
+      
+      // Add game to activeGames if it's active (for timer sync)
+      try {
+        const game = await prisma.game.findUnique({
+          where: { id: gameId },
+          select: { status: true }
+        })
+        if (game && game.status === 'active' && !activeGames.has(gameId)) {
+          activeGames.set(gameId, true)
+        }
+      } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error(`Error checking game status for ${gameId}:`, error)
+        }
+      }
     })
 
     // Leave game room
     socket.on('leave-game', (gameId) => {
       socket.leave(`game:${gameId}`)
-      console.log(`Socket ${socket.id} left game ${gameId}`)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Socket ${socket.id} left game ${gameId}`)
+      }
     })
 
     // Chess move made
     socket.on('move', (data) => {
-      console.log(`[MOVE] Received move for game ${data.gameId} from socket ${socket.id}`)
-      console.log(`[MOVE] FEN: ${data.fen?.substring(0, 50)}...`)
-      console.log(`[MOVE] Times - White: ${data.whiteTimeLeft}, Black: ${data.blackTimeLeft}`)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[MOVE] Received move for game ${data.gameId} from socket ${socket.id}`)
+        console.log(`[MOVE] FEN: ${data.fen?.substring(0, 50)}...`)
+        console.log(`[MOVE] Times - White: ${data.whiteTimeLeft}, Black: ${data.blackTimeLeft}`)
+      }
       
-      // Get all sockets in the game room
-      const room = io.sockets.adapter.rooms.get(`game:${data.gameId}`)
-      const roomSize = room ? room.size : 0
-      console.log(`[MOVE] Room size for game ${data.gameId}: ${roomSize}`)
+      // Ensure game is in activeGames for timer sync
+      if (!activeGames.has(data.gameId)) {
+        activeGames.set(data.gameId, true)
+      }
       
-      // Broadcast to all other players in the game room (not the sender)
-      socket.to(`game:${data.gameId}`).emit('move-made', {
+      // Broadcast to ALL players in the game room (including sender for consistency)
+      // This ensures both players see the move immediately
+      io.to(`game:${data.gameId}`).emit('move-made', {
         ...data,
         whiteTimeLeft: data.whiteTimeLeft,
         blackTimeLeft: data.blackTimeLeft,
       })
-      console.log(`[MOVE] Broadcast sent to game ${data.gameId} (excluding sender ${socket.id})`)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[MOVE] Broadcast sent to all players in game ${data.gameId}`)
+      }
     })
 
     // Game state update
     socket.on('game-update', (data) => {
       // Broadcast to all other players in the game room (not the sender)
       socket.to(`game:${data.gameId}`).emit('game-updated', data)
-      console.log(`Game update broadcast to game ${data.gameId}`)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Game update broadcast to game ${data.gameId}`)
+      }
     })
 
     // Draw offer
@@ -138,15 +267,37 @@ app.prepare().then(() => {
 
     // Resign
     socket.on('resign', (data) => {
-      io.to(`game:${data.gameId}`).emit('player-resigned', data)
+      // Broadcast resignation to all players in the game
+      io.to(`game:${data.gameId}`).emit('player-resigned', {
+        gameId: data.gameId,
+        resignedPlayerId: data.resignedPlayerId || data.playerId,
+        winner: data.winner
+      })
+      // Also emit game-updated to sync state
+      io.to(`game:${data.gameId}`).emit('game-updated', {
+        gameId: data.gameId,
+        status: 'completed',
+        result: data.winner
+      })
     })
 
     // Chat message
     socket.on('chat-message', (data) => {
-      // Send to receiver
-      io.to(`user:${data.receiverId}`).emit('new-message', data)
-      // Send back to sender for confirmation
-      io.to(`user:${data.senderId}`).emit('message-sent', data)
+      const userId = connectedUsers.get(socket.id)
+      if (!userId) return
+      
+      const messageData = {
+        id: data.messageId || null, // Include message ID if available
+        senderId: userId,
+        receiverId: data.receiverId,
+        content: data.content,
+        createdAt: data.createdAt || new Date().toISOString(),
+        tempId: data.tempId || null
+      }
+      
+      // Send to receiver only (sender already has the message from API response)
+      io.to(`user:${data.receiverId}`).emit('new-message', messageData)
+      // Don't send back to sender - they already have it from the API response
     })
 
     // FEATURE 4: In-Game Chat
@@ -186,7 +337,9 @@ app.prepare().then(() => {
           io.to(`user:${friendId}`).emit('user-online', { userId })
         })
       } catch (error) {
-        console.error('User online error:', error)
+        if (process.env.NODE_ENV === 'development') {
+          console.error('User online error:', error)
+        }
       }
     })
 
@@ -219,7 +372,9 @@ app.prepare().then(() => {
           io.to(`user:${friendId}`).emit('user-offline', { userId })
         })
       } catch (error) {
-        console.error('User offline error:', error)
+        if (process.env.NODE_ENV === 'development') {
+          console.error('User offline error:', error)
+        }
       }
     })
 
@@ -305,7 +460,9 @@ app.prepare().then(() => {
       const userId = connectedUsers.get(socket.id) || socket.data.userId
       if (userId) {
         connectedUsers.delete(socket.id)
-        console.log(`User ${userId} disconnected`)
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`User ${userId} disconnected`)
+        }
         
         try {
           await prisma.user.update({
@@ -335,20 +492,28 @@ app.prepare().then(() => {
             io.to(`user:${friendId}`).emit('user-offline', { userId })
           })
         } catch (error) {
-          console.error('Disconnect error:', error)
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Disconnect error:', error)
+          }
         }
       }
-      console.log('Client disconnected:', socket.id)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Client disconnected:', socket.id)
+      }
     })
   })
 
   httpServer
     .once('error', (err) => {
-      console.error(err)
+      if (process.env.NODE_ENV === 'development') {
+        console.error(err)
+      }
       process.exit(1)
     })
     .listen(port, () => {
-      console.log(`> Ready on http://${hostname}:${port}`)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`> Ready on http://${hostname}:${port}`)
+      }
     })
 })
 

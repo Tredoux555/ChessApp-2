@@ -1,7 +1,7 @@
 // components/profile/ProfileEditor.tsx
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useAuthStore } from '@/lib/stores/useAuthStore'
 import toast from 'react-hot-toast'
 
@@ -12,8 +12,65 @@ export default function ProfileEditor() {
   const [profileImage, setProfileImage] = useState<string | null>(user?.profileImage || null)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const [isSaving, setIsSaving] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // Compress image before upload
+  const compressImage = (file: File, maxWidth: number = 800, maxHeight: number = 800, quality: number = 0.8): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          let width = img.width
+          let height = img.height
+          
+          // Calculate new dimensions
+          if (width > height) {
+            if (width > maxWidth) {
+              height = (height * maxWidth) / width
+              width = maxWidth
+            }
+          } else {
+            if (height > maxHeight) {
+              width = (width * maxHeight) / height
+              height = maxHeight
+            }
+          }
+          
+          canvas.width = width
+          canvas.height = height
+          
+          const ctx = canvas.getContext('2d')
+          if (!ctx) {
+            reject(new Error('Could not get canvas context'))
+            return
+          }
+          
+          ctx.drawImage(img, 0, 0, width, height)
+          
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error('Failed to compress image'))
+                return
+              }
+              const compressedFile = new File([blob], file.name, { type: file.type, lastModified: Date.now() })
+              resolve(compressedFile)
+            },
+            file.type,
+            quality
+          )
+        }
+        img.onerror = reject
+        img.src = e.target?.result as string
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
 
   const loadUser = async () => {
     try {
@@ -27,7 +84,16 @@ export default function ProfileEditor() {
     }
   }
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Sync state when user prop changes
+  useEffect(() => {
+    if (user) {
+      setDisplayName(user.displayName || '')
+      setBio(user.bio || '')
+      setProfileImage(user.profileImage || null)
+    }
+  }, [user])
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -43,43 +109,80 @@ export default function ProfileEditor() {
       return
     }
 
-    // Create preview
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setProfileImage(reader.result as string)
-      setImageFile(file)
+    try {
+      // Compress image before setting preview
+      const compressedFile = await compressImage(file)
+      setImageFile(compressedFile)
+      
+      // Create preview
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setProfileImage(reader.result as string)
+      }
+      reader.readAsDataURL(compressedFile)
+    } catch (error) {
+      console.error('Image compression error:', error)
+      toast.error('Failed to process image')
     }
-    reader.readAsDataURL(file)
   }
 
   const handleUploadImage = async () => {
-    if (!imageFile) return
+    if (!imageFile) {
+      toast.error('Please select an image first')
+      return
+    }
 
     setIsUploading(true)
+    setUploadProgress(0)
     try {
       const formData = new FormData()
       formData.append('image', imageFile)
 
-      const response = await fetch('/api/profile/picture', {
-        method: 'PUT',
-        body: formData
+      const xhr = new XMLHttpRequest()
+      
+      // Track upload progress
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const percentComplete = (e.loaded / e.total) * 100
+          setUploadProgress(percentComplete)
+        }
       })
 
+      const response = await new Promise<Response>((resolve, reject) => {
+        xhr.addEventListener('load', () => {
+          const response = new Response(xhr.responseText, {
+            status: xhr.status,
+            statusText: xhr.statusText,
+            headers: new Headers({ 'Content-Type': 'application/json' })
+          })
+          resolve(response)
+        })
+        xhr.addEventListener('error', reject)
+        xhr.open('PUT', '/api/profile/picture')
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest')
+        xhr.send(formData)
+      })
+
+      const data = await response.json()
+
       if (response.ok) {
-        const data = await response.json()
         setProfileImage(data.user.profileImage)
         setImageFile(null)
+        setUploadProgress(0)
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
         await loadUser()
         toast.success('Profile picture updated!')
       } else {
-        const error = await response.json()
-        toast.error(error.error || 'Failed to upload image')
+        toast.error(data.error || 'Failed to upload image')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload error:', error)
-      toast.error('Failed to upload image')
+      toast.error(error.message || 'Failed to upload image')
     } finally {
       setIsUploading(false)
+      setUploadProgress(0)
     }
   }
 
@@ -146,15 +249,15 @@ export default function ProfileEditor() {
           Profile Picture
         </label>
         <div className="flex items-center gap-4">
-          <div className="relative w-24 h-24 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
+          <div className="relative w-32 h-32 rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600">
             {profileImage ? (
               <img
                 src={profileImage}
                 alt="Profile"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400 text-3xl">
+              <div className="w-full h-full flex items-center justify-center text-gray-400 text-4xl">
                 {user?.username?.[0]?.toUpperCase() || '?'}
               </div>
             )}
@@ -181,9 +284,21 @@ export default function ProfileEditor() {
                 type="button"
                 onClick={handleUploadImage}
                 disabled={isUploading}
-                className="px-4 py-2 bg-green-500 text-white text-sm rounded hover:bg-green-600 disabled:opacity-50 transition"
+                className="px-4 py-2 bg-green-500 text-white text-sm rounded hover:bg-green-600 disabled:opacity-50 transition relative overflow-hidden"
               >
-                {isUploading ? 'Uploading...' : 'Upload'}
+                {isUploading ? (
+                  <span className="relative z-10">
+                    Uploading... {uploadProgress > 0 ? `${Math.round(uploadProgress)}%` : ''}
+                  </span>
+                ) : (
+                  'Upload'
+                )}
+                {isUploading && uploadProgress > 0 && (
+                  <div
+                    className="absolute inset-0 bg-green-600 transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                )}
               </button>
             )}
             

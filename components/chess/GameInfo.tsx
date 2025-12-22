@@ -38,10 +38,10 @@ export default function GameInfo({
             <img
               src={whitePlayer.profileImage}
               alt={whitePlayer.username}
-              className="w-10 h-10 rounded-full"
+              className="w-10 h-10 rounded-lg object-contain border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-lg bg-white border-2 border-gray-300 flex items-center justify-center font-bold">
               {whitePlayer.username.charAt(0).toUpperCase()}
             </div>
           )}
@@ -67,10 +67,10 @@ export default function GameInfo({
             <img
               src={blackPlayer.profileImage}
               alt={blackPlayer.username}
-              className="w-10 h-10 rounded-full"
+              className="w-10 h-10 rounded-lg object-contain border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-gray-800 text-white flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-lg bg-gray-800 text-white flex items-center justify-center font-bold">
               {blackPlayer.username.charAt(0).toUpperCase()}
             </div>
           )}

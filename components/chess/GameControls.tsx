@@ -56,6 +56,7 @@ export default function GameControls({
 
     setIsProcessing(true)
     try {
+      // First update game via API
       const response = await fetch(`/api/games/${gameId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -63,16 +64,26 @@ export default function GameControls({
       })
 
       if (response.ok) {
-        socket?.emit('player-resigned', { gameId, playerId: user?.id })
+        const data = await response.json()
+        // Emit socket event with proper data for opponent notification
+        socket?.emit('resign', { 
+          gameId, 
+          playerId: user?.id,
+          resignedPlayerId: user?.id,
+          winner: data.game?.result || 'unknown'
+        })
         toast.success('You have resigned')
         setTimeout(() => {
           window.location.href = '/dashboard'
         }, 1500)
       } else {
-        toast.error('Failed to resign')
+        const errorData = await response.json()
+        toast.error(errorData.error || 'Failed to resign')
       }
     } catch (error) {
-      console.error('Resign error:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Resign error:', error)
+      }
       toast.error('Failed to resign')
     } finally {
       setIsProcessing(false)
