@@ -58,7 +58,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ games })
   } catch (error: any) {
-    console.error('Get games error:', error)
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Get games error:', error)
+    }
     
     if (error.message === 'Unauthorized') {
       return NextResponse.json(
@@ -149,7 +151,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ game })
   } catch (error: any) {
-    console.error('Create game error:', error)
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Create game error:', error)
+    }
     
     if (error.message === 'Unauthorized') {
       return NextResponse.json(

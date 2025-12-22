@@ -563,7 +563,9 @@ export default function ChessGame({
           }
         })
       }).catch(error => {
-        console.error('Failed to save move to server:', error)
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to save move to server:', error)
+        }
         toast.error('Failed to save move. Please refresh.')
       })
 

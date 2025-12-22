@@ -23,7 +23,9 @@ export default function ProductGrid() {
         setError(data.error || 'Failed to load products')
       }
     } catch (error) {
-      console.error('Error fetching products:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error fetching products:', error)
+      }
       setError('Failed to load products. Please try again.')
     } finally {
       setIsLoading(false)

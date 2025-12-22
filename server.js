@@ -89,18 +89,24 @@ app.prepare().then(() => {
             activeGames.delete(gameId)
           }
         } catch (gameError) {
-          console.error(`Timer sync error for game ${gameId}:`, gameError)
+          if (process.env.NODE_ENV === 'development') {
+            console.error(`Timer sync error for game ${gameId}:`, gameError)
+          }
           // Remove problematic game from activeGames
           activeGames.delete(gameId)
         }
       }
     } catch (error) {
-      console.error('Timer sync error:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Timer sync error:', error)
+      }
     }
   }, 1000) // Sync every 1 second for better accuracy
 
   io.on('connection', (socket) => {
-    console.log('New client connected:', socket.id)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('New client connected:', socket.id)
+    }
 
     // User authentication
     socket.on('authenticate', async (data) => {
@@ -499,11 +505,15 @@ app.prepare().then(() => {
 
   httpServer
     .once('error', (err) => {
-      console.error(err)
+      if (process.env.NODE_ENV === 'development') {
+        console.error(err)
+      }
       process.exit(1)
     })
     .listen(port, () => {
-      console.log(`> Ready on http://${hostname}:${port}`)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`> Ready on http://${hostname}:${port}`)
+      }
     })
 })
 

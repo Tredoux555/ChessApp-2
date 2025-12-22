@@ -48,7 +48,9 @@ export async function GET(
 
     return NextResponse.json({ game })
   } catch (error: any) {
-    console.error('Get game error:', error)
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Get game error:', error)
+    }
     
     if (error.message === 'Unauthorized') {
       return NextResponse.json(
@@ -518,7 +520,9 @@ export async function PUT(
 
     return NextResponse.json({ game: updatedGame })
   } catch (error: any) {
-    console.error('Update game error:', error)
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Update game error:', error)
+    }
     
     if (error.message === 'Unauthorized') {
       return NextResponse.json(
